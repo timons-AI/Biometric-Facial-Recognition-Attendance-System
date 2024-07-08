@@ -1,0 +1,3320 @@
+Directory Structure:
+================================================================================
+src/
+    api.ts
+    App.css
+    App.tsx
+    claude.tsx
+    index.css
+    main.tsx
+    toaster.ts
+    types.ts
+    vite-env.d.ts
+    assets/
+        react.svg
+    components/
+        Alert.tsx
+        dashboard.tsx
+        DataView.tsx
+        DetailsComponents.tsx
+        CommunityDetails/
+            ComunityDetails.tsx
+            index.ts
+        Displays/
+            Person.tsx
+    forms/
+        community-form.tsx
+        house-hold-form.tsx
+        person-form.tsx
+    hooks/
+        useCommunityActions.ts
+        useHouseholdActions.ts
+        usePersonActions.ts
+        useUiActions.tsx
+    store/
+        atom.ts
+================================================================================
+
+File: api.ts
+--------------------------------------------------------------------------------
+import { Community, Household, Person } from "./types";
+
+interface HouseholdData {
+  address: string;
+  alarmDevice: { id: string; status: string };
+}
+
+const API_BASE_URL = "http://localhost:5000/api";
+
+export const api = {
+  // Communities
+  async getCommunities(): Promise<{ communities: Community[] }> {
+    const response = await fetch(`${API_BASE_URL}/communities`);
+    if (!response.ok) throw new Error("Failed to fetch communities");
+    return response.json();
+  },
+
+  async createCommunity(
+    communityData: Omit<Community, "id" | "households">
+  ): Promise<Community> {
+    const response = await fetch(`${API_BASE_URL}/community`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(communityData),
+    });
+    if (!response.ok) throw new Error("Failed to create community");
+    return response.json();
+  },
+
+  async updateCommunity(
+    communityId: string,
+    communityData: Omit<Community, "id" | "households">
+  ): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/community/${communityId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(communityData),
+    });
+    if (!response.ok) throw new Error("Failed to update community");
+    return response.json();
+  },
+
+  async deleteCommunity(communityId: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/community/${communityId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete community");
+    return response.json();
+  },
+
+  // Households
+  async getCommunityHouseholds(
+    communityId: string
+  ): Promise<{ households: Household[] }> {
+    const response = await fetch(
+      `${API_BASE_URL}/community/${communityId}/households`
+    );
+    if (!response.ok) throw new Error("Failed to fetch households");
+    return response.json();
+  },
+
+  async createCommunityHousehold(
+    communityId: string,
+    householdData: Omit<HouseholdData, "id" | "people">
+  ): Promise<Household> {
+    const response = await fetch(
+      `${API_BASE_URL}/community/${communityId}/household`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(householdData),
+      }
+    );
+    if (!response.ok) throw new Error("Failed to create household");
+    return response.json();
+  },
+
+  async updateHousehold(
+    householdId: string,
+    householdData: Omit<HouseholdData, "id" | "people">
+  ): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/household/${householdId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(householdData),
+    });
+    if (!response.ok) throw new Error("Failed to update household");
+    return response.json();
+  },
+
+  async deleteHousehold(householdId: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/household/${householdId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete household");
+    return response.json();
+  },
+
+  // People
+  async getHouseholdPeople(householdId: string): Promise<{ people: Person[] }> {
+    const response = await fetch(
+      `${API_BASE_URL}/household/${householdId}/people`
+    );
+    if (!response.ok) throw new Error("Failed to fetch people");
+    return response.json();
+  },
+
+  async createHouseholdPerson(
+    householdId: string,
+    personData: Omit<Person, "id">
+  ): Promise<Person> {
+    const response = await fetch(
+      `${API_BASE_URL}/household/${householdId}/person`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(personData),
+      }
+    );
+    if (!response.ok) throw new Error("Failed to create person");
+    return response.json();
+  },
+
+  async updatePerson(
+    personId: string,
+    personData: Omit<Person, "id">
+  ): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/person/${personId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(personData),
+    });
+    if (!response.ok) throw new Error("Failed to update person");
+    return response.json();
+  },
+
+  async deletePerson(personId: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/person/${personId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete person");
+    return response.json();
+  },
+
+  // Alarm
+  async updateAlarmStatus(
+    householdId: string,
+    status: string
+  ): Promise<{ message: string }> {
+    const response = await fetch(
+      `${API_BASE_URL}/household/${householdId}/alarm`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }
+    );
+    if (!response.ok) throw new Error("Failed to update alarm status");
+    return response.json();
+  },
+
+  // Sample Data Generation
+  async generateSampleData(): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/generate-sample-data`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to generate sample data");
+    return response.json();
+  },
+};
+
+================================================================================
+
+File: App.css
+--------------------------------------------------------------------------------
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* ForceDirectedGraph.css */
+.graph-container {
+  position: relative;
+  width: 100%;
+  height: 800px;
+}
+
+.node-details {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+================================================================================
+
+File: App.tsx
+--------------------------------------------------------------------------------
+import {
+  Button,
+  InputGroup,
+  FormGroup,
+  HTMLSelect,
+  UL,
+  Elevation,
+  NumericInput,
+  SectionCard,
+  Section,
+  OverlayToaster,
+  Toast2,
+  Toaster,
+  CompoundTag,
+  Tag,
+  Menu,
+  MenuItem,
+  MenuDivider,
+  Popover,
+  Position,
+} from "@blueprintjs/core";
+import { Card, CardList } from "@blueprintjs/core";
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+import "react-toastify/dist/ReactToastify.css";
+
+interface User {
+  id: number;
+  name: string;
+  phone_number: string;
+}
+
+interface Device {
+  id: number;
+  device_id: string;
+}
+const myToaster: Toaster = await OverlayToaster.createAsync({
+  position: "top",
+});
+const showToast = (
+  message: string,
+  intent: "none" | "primary" | "success" | "warning" | "danger"
+) => {
+  myToaster.show({ message, intent });
+};
+
+function App() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [userDevices, setUserDevices] = useState<{ [key: number]: Device[] }>(
+    {}
+  );
+  const [userName, setUserName] = useState<string>("");
+  const [userPhoneNumber, setUserPhoneNumber] = useState<string>("");
+  const [deviceId, setDeviceId] = useState<string>("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get<User[]>("http://localhost:5000/users");
+      setUsers(response.data);
+    } catch (error) {
+      showToast("Failed to fetch users.", "danger");
+    }
+  };
+
+  const handleRegisterUser = async () => {
+    try {
+      await axios.post("http://localhost:5000/register_user", {
+        name: userName,
+        phone_number: userPhoneNumber,
+      });
+      showToast("User registered successfully.", "success");
+      fetchUsers();
+    } catch (error) {
+      showToast("Failed to register user.", "danger");
+      console.log(error);
+    }
+  };
+
+  const handleRegisterDevice = async () => {
+    try {
+      await axios.post("http://localhost:5000/register_device", {
+        user_id: selectedUserId,
+        device_id: deviceId,
+      });
+      showToast("Device registered successfully.", "success");
+    } catch (error) {
+      showToast("Failed to register device.", "danger");
+    }
+  };
+
+  const handleTriggerAlarm = async () => {
+    try {
+      await axios.post("http://localhost:5000/trigger_alarm", {
+        phone_number: userPhoneNumber,
+      });
+      showToast("Alarm triggered successfully.", "success");
+    } catch (error) {
+      showToast("Failed to trigger alarm.", "danger");
+    }
+  };
+
+  const handleDeactivateAlarm = async () => {
+    try {
+      await axios.post("http://localhost:5000/deactivate_alarm", {
+        phone_number: userPhoneNumber,
+      });
+      showToast("Alarm deactivated successfully.", "success");
+    } catch (error) {
+      showToast("Failed to deactivate alarm.", "danger");
+    }
+  };
+
+  const handleFetchUserDevices = async (userId: number) => {
+    try {
+      const response = await axios.get<Device[]>(
+        `http://localhost:5000/user_devices/${userId}`
+      );
+      setUserDevices((prevState) => ({
+        ...prevState,
+        [userId]: response.data,
+      }));
+    } catch (error) {
+      showToast("Failed to fetch user devices.", "danger");
+    }
+  };
+  //   # all routes
+  // # POST /register_user
+  // # POST /register_device
+  // # GET /users
+  // # GET /user_devices/<int:user_id>
+  // # POST /trigger_alarm
+  // # POST /deactivate_alarm
+
+  const TestButton = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/users");
+      console.log(response.data);
+      showToast("User registered successfully.", "success");
+    } catch (error) {
+      showToast("Failed to fetch users.", "danger");
+    }
+  };
+
+  // send sms
+
+  const [sms, setSms] = useState<string>("");
+  const [phone_number, setPhone_number] = useState<string>("");
+
+  // # Return a success response
+  // return jsonify({'message': 'SMS sent successfully', 'sid': message.sid})
+  // +16175551212
+
+  const handleSendSms = async () => {
+    try {
+      const response = await axios.post("http://localhost:5000/send_sms", {
+        message: sms,
+        to: phone_number,
+      });
+      console.log(response.data);
+      showToast("SMS sent successfully.", "success");
+    } catch (error) {
+      showToast("Failed to send SMS.", "danger");
+    }
+  };
+
+  return (
+    <div className="  grid grid-cols-1 gap-1 p-2 md:grid-cols-2 lg:grid-cols-3">
+      {/* <h1 className=" text-4xl">Alarm Community System</h1>
+      <div>
+        <Button onClick={TestButton}>Test Button</Button>
+      </div> */}
+      <Section
+        className="sample-class"
+        // collapseProps={/* sample collapseProps */}
+        collapsible={false}
+        compact={false}
+        elevation={Elevation.ZERO}
+        icon="user"
+        // rightElement={/* sample rightElement */}
+        subtitle="This is where the member of the community will be registered "
+        title="Register User"
+        // titleRenderer={/* sample titleRenderer */}
+      >
+        <SectionCard>
+          <div className=" p-2">
+            <h2>Register User</h2>
+            <FormGroup
+              label="Name"
+              helperText="Please enter residents name...."
+              labelInfo="(required)"
+              labelFor="text-input"
+            >
+              <InputGroup
+                type="text"
+                placeholder="Name"
+                value={userName}
+                onChange={(e: any) => setUserName(e.target.value)}
+              />
+            </FormGroup>
+            <FormGroup label="Phone Number">
+              <NumericInput
+                placeholder="Phone Number"
+                value={userPhoneNumber}
+                onChange={(e: any) => setUserPhoneNumber(e.target.value)}
+              />
+            </FormGroup>
+            <Button onClick={handleRegisterUser}>Register User</Button>
+          </div>
+        </SectionCard>
+      </Section>
+
+      <Section
+        className="sample-class"
+        // collapseProps={/* sample collapseProps */}
+        collapsible={false}
+        compact={false}
+        elevation={Elevation.ZERO}
+        icon="phone"
+        // rightElement={/* sample rightElement */}
+        subtitle="Send SMS to a test phone number "
+        title="Send SMS"
+        // titleRenderer={/* sample titleRenderer */}
+      >
+        <SectionCard>
+          <h2>Send SMS</h2>
+          <FormGroup label="Phone Number">
+            <NumericInput
+              placeholder="Phone Number"
+              value={phone_number}
+              onChange={(e: any) => setPhone_number(e.target.value)}
+            />
+          </FormGroup>
+          <FormGroup label="Message">
+            <InputGroup
+              type="text"
+              placeholder="Message"
+              value={sms}
+              onChange={(e: any) => setSms(e.target.value)}
+            />
+          </FormGroup>
+          <Button onClick={handleSendSms}>Send SMS</Button>
+        </SectionCard>
+      </Section>
+
+      <Section
+        className="sample-class row-span-2"
+        // collapseProps={/* sample collapseProps */}
+        collapsible={false}
+        compact={false}
+        elevation={Elevation.ONE}
+        icon="satellite"
+        // rightElement={/* sample rightElement */}
+        subtitle="Registration of the house alarm module"
+        title="Register Device"
+        // titleRenderer={/* sample titleRenderer */}
+      >
+        <SectionCard>
+          <FormGroup label="User">
+            <HTMLSelect
+              onChange={(e: any) => setSelectedUserId(e.target.value)}
+              value={selectedUserId}
+            >
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </HTMLSelect>
+          </FormGroup>
+          <FormGroup label="Device ID">
+            <InputGroup
+              type="text"
+              placeholder="Device ID"
+              value={deviceId}
+              onChange={(e: any) => setDeviceId(e.target.value)}
+            />
+          </FormGroup>
+          <Button onClick={handleRegisterDevice}>Register Device</Button>
+        </SectionCard>
+      </Section>
+
+      <Section
+        className="sample-class"
+        // collapseProps={/* sample collapseProps */}
+        collapsible={false}
+        compact={false}
+        elevation={Elevation.ZERO}
+        icon="take-action"
+        // rightElement={/* sample rightElement */}
+        subtitle="Actions for an individual user "
+        title="User Actions"
+        // titleRenderer={/* sample titleRenderer */}
+      >
+        <SectionCard>
+          <h2>Trigger Alarm</h2>
+          <FormGroup label="Phone Number">
+            <InputGroup
+              type="text"
+              placeholder="Phone Number"
+              value={userPhoneNumber}
+              onChange={(e: any) => setUserPhoneNumber(e.target.value)}
+            />
+          </FormGroup>
+          <Button onClick={handleTriggerAlarm}>Trigger Alarm</Button>
+        </SectionCard>
+        <SectionCard>
+          <h2>Deactivate Alarm</h2>
+          <FormGroup label="Phone Number">
+            <InputGroup
+              type="text"
+              placeholder="Phone Number"
+              value={userPhoneNumber}
+              onChange={(e: any) => setUserPhoneNumber(e.target.value)}
+            />
+          </FormGroup>
+          <Button onClick={handleDeactivateAlarm}>Deactivate Alarm</Button>
+        </SectionCard>
+      </Section>
+
+      <div>
+        <Section
+          className="sample-class h-full"
+          // collapseProps={/* sample collapseProps */}
+          collapsible={false}
+          compact={false}
+          elevation={Elevation.ZERO}
+          icon="user"
+          // rightElement={/* sample rightElement */}
+          subtitle="List of users registerd for this community "
+          title="Users"
+          // titleRenderer={/* sample titleRenderer */}
+        >
+          {users.map((user) => (
+            <SectionCard key={user.id}>
+              <CompoundTag
+                key={user.id}
+                leftContent={user.phone_number}
+                // onRemove={removable && onRemove}
+                icon="user"
+                // round={true}
+                // rightIcon={rightIcon === true ? "map-marker" : undefined}
+                // {...tagProps}
+              >
+                {user.name}
+              </CompoundTag>
+
+              {/* <Button onClick={() => handleFetchUserDevices(user.id)}>
+                Fetch Devices
+              </Button> */}
+              {userDevices[user.id]?.map((device) => (
+                <Tag key={device.id}>{device.device_id}</Tag>
+              ))}
+            </SectionCard>
+          ))}
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+================================================================================
+
+File: claude.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect, useCallback } from "react";
+import { api } from "./api";
+import { Community, Household, Person, Log } from "./types";
+
+import { useAtom } from "jotai";
+
+import {
+  Button,
+  Card,
+  Drawer,
+  Icon,
+  Menu,
+  MenuItem,
+  Navbar,
+  NavbarGroup,
+  NavbarHeading,
+  Overlay2,
+  Classes,
+  MenuDivider,
+  Popover,
+  Toaster,
+  Tooltip,
+  Section,
+  SectionCard,
+  Tree,
+  TreeNodeInfo,
+  Position,
+  DrawerSize,
+  InputGroup,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  IconSize,
+  EntityTitle,
+  Tag,
+  Elevation,
+  NonIdealState,
+  CardList,
+  Intent,
+} from "@blueprintjs/core";
+
+import {
+  communitiesAtom,
+  selectedCommunityAtom,
+  isCommunityDrawerOpenAtom,
+  isLogsDrawerOpenAtom,
+  overlayContentAtom,
+  selectedHouseholdAtom,
+  selectedPersonAtom,
+  selectedContentAtom,
+  logsAtom,
+  isDialogOpenAtom,
+  treeNodesAtom,
+  isDrawerOpenAtom,
+  darkModeAtom,
+  deleteAlertOpenAtom,
+  alarmAlertOpenAtom,
+  alertTargetAtom,
+} from "./store/atom";
+import "@blueprintjs/core/lib/css/blueprint.css";
+import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+import { AppToaster } from "./toaster";
+
+import { DetailsComponent } from "./components/DetailsComponents";
+import Dashboard from "./components/dashboard";
+import useUiActions from "./hooks/useUiActions";
+import useCommunityActions from "./hooks/useCommunityActions";
+import AlertComponent from "./components/Alert";
+import PersonDetails from "./components/Displays/Person";
+import useHouseholdActions from "./hooks/useHouseholdActions";
+
+// Dummy data
+const dummyData: { communities: Community[] } = {
+  communities: [
+    {
+      id: 1,
+      name: "Oakridge Community",
+      phoneNumber: "555-OAKRIDGE",
+      households: [
+        {
+          id: 101,
+          address: "123 Oak St",
+          people: [
+            { id: 1001, name: "John Doe", phone: "555-1001" },
+            { id: 1002, name: "Jane Doe", phone: "555-1002" },
+          ],
+          alarmDevice: { id: "OAK-101", status: "active" },
+        },
+        {
+          id: 102,
+          address: "456 Maple Ave",
+          people: [
+            { id: 1003, name: "Bob Smith", phone: "555-1003" },
+            { id: 1004, name: "Alice Smith", phone: "555-1004" },
+          ],
+          alarmDevice: { id: "OAK-102", status: "active" },
+        },
+      ],
+    },
+    {
+      id: 2,
+      name: "Pinecrest Neighborhood",
+      phoneNumber: "555-PINECREST",
+      households: [
+        {
+          id: 201,
+          address: "789 Pine Rd",
+          people: [
+            { id: 2001, name: "Charlie Brown", phone: "555-2001" },
+            { id: 2002, name: "Lucy Brown", phone: "555-2002" },
+          ],
+          alarmDevice: { id: "PINE-201", status: "active" },
+        },
+      ],
+    },
+  ],
+};
+
+const App: React.FC = () => {
+  const { handleCreateCommunity, handleCreateHousehold, handleCreatePerson } =
+    useUiActions();
+
+  const size = useWindowSize();
+  const isMobile = size.width !== undefined && size.width < 768;
+  const [alarmAlertOpen, setAlarmAlertOpen] = useAtom(alarmAlertOpenAtom);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useAtom(deleteAlertOpenAtom);
+  const [alertTarget, setAlertTarget] = useAtom(alertTargetAtom);
+
+  const [communities, setCommunities] = useAtom(communitiesAtom);
+  const [selectedCommunity, setSelectedCommunity] = useAtom(
+    selectedCommunityAtom
+  );
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isCommunityDrawerOpen, setIsCommunityDrawerOpen] = useAtom(
+    isCommunityDrawerOpenAtom
+  );
+  const [isLogsDrawerOpen, setIsLogsDrawerOpen] = useAtom(isLogsDrawerOpenAtom);
+  const [overlayContent, setOverlayContent] = useAtom(overlayContentAtom);
+  const [selectedHousehold, setSelectedHousehold] = useAtom(
+    selectedHouseholdAtom
+  );
+  const [selectedPerson, setSelectedPerson] = useAtom(selectedPersonAtom);
+  const [selectedContent, setSelectedContent] = useAtom(selectedContentAtom);
+  const [logs, setLogs] = useAtom(logsAtom);
+
+  const [isDialogOpen, setIsDialogOpen] = useAtom(isDialogOpenAtom);
+  const [treeNodes, setTreeNodes] = useAtom(treeNodesAtom);
+  const [isDarkMode, setIsDarkMode] = useAtom(darkModeAtom);
+
+  const [isDrawerOpen, setIsDrawerOpen] = useAtom(isDrawerOpenAtom);
+
+  //   useEffect(() => {
+  //     // Simulating API call to fetch communities
+  //     console.log("Fetching communities...");
+  //     setCommunities(dummyData.communities);
+  //   }, []);
+
+  const handleHouseholdSelect = useCallback(
+    (household: Household) => {
+      if (household) {
+        setSelectedHousehold(household);
+        setSelectedPerson(null); // Clear any selected person
+        setSelectedContent({
+          title: household.address,
+          component: (
+            <HouseholdDetails
+              household={household}
+              onClose={() => setIsDialogOpen(false)}
+            />
+          ),
+        });
+        if (isMobile) {
+          setIsDialogOpen(true);
+        }
+      }
+    },
+    [
+      setSelectedHousehold,
+      setSelectedPerson,
+      setSelectedContent,
+      setIsDialogOpen,
+    ]
+  );
+
+  const handlePersonSelect = useCallback(
+    (person: Person) => {
+      if (person && selectedHousehold && selectedCommunity) {
+        setSelectedPerson(person);
+        setSelectedHousehold(null); // Clear any selected household
+        setSelectedContent({
+          title: person.name,
+          component: (
+            <PersonDetails
+              person={person}
+              household={selectedHousehold}
+              community={selectedCommunity}
+              onClose={() => setIsDialogOpen(false)}
+            />
+          ),
+        });
+        if (isMobile) {
+          setIsDialogOpen(true);
+        }
+      }
+    },
+    [
+      selectedHousehold,
+      selectedCommunity,
+      setSelectedPerson,
+      setSelectedHousehold,
+      setSelectedContent,
+      setIsDialogOpen,
+    ]
+  );
+
+  const handleAlarmTrigger = useCallback(
+    (household: Household) => {
+      setAlertTarget(household);
+      setAlarmAlertOpen(true);
+    },
+    [setAlertTarget, setAlarmAlertOpen]
+  );
+
+  const updateSelectedContent = useCallback(() => {
+    if (selectedPerson && selectedHousehold && selectedCommunity) {
+      setSelectedContent({
+        title: selectedPerson.name,
+        component: (
+          <MemoizedPersonDetails
+            person={selectedPerson}
+            household={selectedHousehold}
+            community={selectedCommunity}
+            onClose={() => setIsDialogOpen(false)}
+          />
+        ),
+      });
+    } else if (selectedHousehold && selectedCommunity) {
+      setSelectedContent({
+        title: selectedHousehold.address,
+        component: (
+          <MemoizedHouseholdDetails
+            household={selectedHousehold}
+            onClose={() => setIsDialogOpen(false)}
+          />
+        ),
+      });
+    } else if (selectedCommunity) {
+      setSelectedContent({
+        title: selectedCommunity.name,
+        component: (
+          <MemoizedCommunityDetails
+            community={selectedCommunity}
+            onHouseholdSelect={handleHouseholdSelect}
+            onPersonSelect={handlePersonSelect}
+            onAlarmTrigger={handleAlarmTrigger}
+          />
+        ),
+      });
+    } else {
+      setSelectedContent({
+        title: "Dashboard",
+        component: <Dashboard />,
+      });
+    }
+  }, [
+    selectedPerson,
+    selectedHousehold,
+    selectedCommunity,
+    setIsDialogOpen,
+    handleHouseholdSelect,
+    handlePersonSelect,
+    handleAlarmTrigger,
+  ]);
+
+  useEffect(() => {
+    setTreeNodes(convertToTreeNodes(communities));
+
+    if (selectedCommunity) {
+      const updatedCommunity = communities.find(
+        (c) => c.id === selectedCommunity.id
+      );
+      if (updatedCommunity) {
+        setSelectedCommunity(updatedCommunity);
+
+        if (selectedHousehold) {
+          const updatedHousehold = updatedCommunity.households.find(
+            (h) => h.id === selectedHousehold.id
+          );
+          if (updatedHousehold) {
+            setSelectedHousehold(updatedHousehold);
+
+            if (selectedPerson) {
+              const updatedPerson = updatedHousehold.people.find(
+                (p) => p.id === selectedPerson.id
+              );
+              if (updatedPerson) {
+                setSelectedPerson(updatedPerson);
+              } else {
+                setSelectedPerson(null);
+              }
+            }
+          } else {
+            setSelectedHousehold(null);
+            setSelectedPerson(null);
+          }
+        }
+      } else {
+        setSelectedCommunity(null);
+        setSelectedHousehold(null);
+        setSelectedPerson(null);
+      }
+    }
+
+    updateSelectedContent();
+  }, [
+    communities,
+    selectedCommunity,
+    selectedHousehold,
+    selectedPerson,
+    updateSelectedContent,
+  ]);
+
+  const MemoizedCommunityDetails = React.memo(CommunityDetails);
+  const MemoizedHouseholdDetails = React.memo(HouseholdDetails);
+  const MemoizedPersonDetails = React.memo(PersonDetails);
+
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        const fetchedCommunities = await api.getCommunities();
+
+        console.log("Fetched communities:", fetchedCommunities);
+
+        setCommunities(fetchedCommunities.communities);
+
+        setTreeNodes(convertToTreeNodes(fetchedCommunities.communities));
+        // toast
+        (await AppToaster).show({
+          message: "Fetched communities",
+          intent: "success",
+        });
+      } catch (error) {
+        console.error("Error fetching communities:", error);
+
+        (await AppToaster).show({
+          message: "Failed to fetch communities, showing dummy data",
+          intent: "danger",
+        });
+        // default to dummy data
+        setCommunities(dummyData.communities);
+      }
+    };
+
+    fetchCommunities();
+  }, []);
+
+  const addLog = useCallback(async (message: string) => {
+    setLogs((prevLogs) => [
+      ...prevLogs,
+      { timestamp: new Date().toISOString(), message },
+    ]);
+    // (await AppToaster).show({ message: message });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedContent) {
+      setSelectedContent({
+        title: "Dashboard",
+        component: <Dashboard />,
+      });
+    }
+  }, [selectedContent, setSelectedContent]);
+
+  const convertToTreeNodes = (communities: any[]): TreeNodeInfo[] => {
+    return communities.map((community) => ({
+      id: community.id || community.key,
+      label: community.name || "Unnamed Community",
+      icon: "home",
+      isExpanded: false,
+      childNodes: Array.isArray(community.households)
+        ? community.households.map((household: any) => ({
+            id: household.id || household.key,
+            label: household.address || "Unnamed Household",
+            icon: "office",
+            isExpanded: false,
+            childNodes: Array.isArray(household.people)
+              ? household.people.map((person: any) => ({
+                  id: person.id || person.key,
+                  label: person.name || "Unnamed Person",
+                  icon: "person",
+                }))
+              : [],
+          }))
+        : [],
+    }));
+  };
+  //   const [treeNodes, setTreeNodes] = useState<TreeNodeInfo[]>([]);
+
+  useEffect(() => {
+    // Simulating API call to fetch communities
+    console.log("Fetching communities...");
+    setCommunities(dummyData.communities);
+    setTreeNodes(convertToTreeNodes(dummyData.communities));
+  }, []);
+
+  const handleNodeClick = (
+    node: TreeNodeInfo,
+    nodePath: number[],
+    e: React.MouseEvent<HTMLElement>
+  ) => {
+    const nodeId = node.id as number;
+    // setSelectedContent(null);
+    if (node.childNodes) {
+      if (node.icon === "home") {
+        handleCommunitySelect(nodeId);
+      } else if (node.icon === "office") {
+        const community = communities.find((c) =>
+          c.households.some((h) => h.id === nodeId)
+        );
+        if (community) {
+          const household = community.households.find((h) => h.id === nodeId);
+          if (household) handleHouseholdSelect(household);
+        }
+      }
+    } else {
+      const community = communities.find((c) =>
+        c.households.some((h) => h.people.some((p) => p.id === nodeId))
+      );
+      if (community) {
+        const household = community.households.find((h) =>
+          h.people.some((p) => p.id === nodeId)
+        );
+        if (household) {
+          const person = household.people.find((p) => p.id === nodeId);
+          if (person) handlePersonSelect(person);
+        }
+      }
+    }
+  };
+
+  const handleNodeExpand = (node: TreeNodeInfo, nodePath: number[]) => {
+    const newNodes = [...treeNodes];
+    const targetNode = Tree.nodeFromPath(nodePath, newNodes);
+    if (targetNode) {
+      targetNode.isExpanded = true;
+    }
+    setTreeNodes(newNodes);
+  };
+
+  const handleNodeCollapse = (node: TreeNodeInfo, nodePath: number[]) => {
+    const newNodes = [...treeNodes];
+    const targetNode = Tree.nodeFromPath(nodePath, newNodes);
+    if (targetNode) {
+      targetNode.isExpanded = false;
+    }
+    setTreeNodes(newNodes);
+  };
+
+  const handleCommunitySelect = (communityId: number) => {
+    const community = communities.find((c) => c.id === communityId);
+    if (community) {
+      setSelectedCommunity(community);
+      setSelectedContent(null); // Clear any selected household or person
+      setSelectedContent({
+        title: community.name,
+        component: (
+          <CommunityDetails
+            community={community}
+            onHouseholdSelect={handleHouseholdSelect}
+            onPersonSelect={handlePersonSelect}
+            onAlarmTrigger={handleAlarmTrigger}
+          />
+        ),
+      });
+      if (isMobile) {
+        setIsDialogOpen(true);
+      }
+    }
+  };
+
+  const removeCommunity = async (community: Community) => {
+    setAlertTarget(community);
+    setDeleteAlertOpen(true);
+  };
+
+  const { deleteCommunity } = useCommunityActions();
+
+  const confirmDeleteCommunity = async () => {
+    if (alertTarget && "id" in alertTarget) {
+      try {
+        await deleteCommunity(alertTarget.id.toString());
+        console.log("Community deleted successfully");
+        (await AppToaster).show({
+          message: `Community ${alertTarget.id} deleted successfully`,
+          intent: "success",
+        });
+      } catch (error) {
+        console.error("Failed to delete community:", error);
+        (await AppToaster).show({
+          message: `Failed to delete community ${alertTarget.id}`,
+          intent: "danger",
+        });
+      }
+    }
+    setDeleteAlertOpen(false);
+    setAlertTarget(null);
+  };
+
+  const handleGenerateSampleData = async () => {
+    try {
+      await api.generateSampleData();
+      const fetchedCommunities = await api.getCommunities();
+      setCommunities(fetchedCommunities.communities);
+      setTreeNodes(convertToTreeNodes(fetchedCommunities.communities));
+      addLog("Generated sample data");
+    } catch (error) {
+      console.error("Error generating sample data:", error);
+      // Show error message to user
+    }
+  };
+
+  const { updateAlarmStatus } = useHouseholdActions();
+
+  const confirmToggleAlarm = async () => {
+    if (alertTarget && "address" in alertTarget) {
+      try {
+        if (alertTarget.alarmDevice.status === "active") {
+          console.log(`Disabling alarm for household: ${alertTarget.address}`);
+          addLog(`Alarm disabled for household: ${alertTarget.address}`);
+          // API call to disable alarm
+          await updateAlarmStatus(alertTarget.id.toString(), "inactive");
+          console.log("API call: Disable alarm");
+          (await AppToaster).show({
+            message: `Alarm disabled for ${alertTarget.address}`,
+            intent: "success",
+          });
+        } else {
+          console.log(`Triggering alarm for household: ${alertTarget.address}`);
+          addLog(`Alarm triggered for household: ${alertTarget.address}`);
+          // API call to trigger alarm
+          await updateAlarmStatus(alertTarget.id.toString(), "active");
+          console.log("API call: Trigger alarm");
+          // Simulating notification to all community members
+          console.log("API call: Notify all community members");
+          (await AppToaster).show({
+            message: `Alarm triggered for ${alertTarget.address}`,
+            intent: "danger",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to trigger alarm:", error);
+        (await AppToaster).show({
+          message: `Failed to trigger alarm for ${alertTarget.address}`,
+          intent: "danger",
+        });
+      }
+    }
+    setAlarmAlertOpen(false);
+    setAlertTarget(null);
+  };
+
+  const handleShowLogs = useCallback(() => {
+    setIsLogsDrawerOpen(true);
+  }, []);
+
+  const closeLogsDrawer = useCallback(() => {
+    setIsLogsDrawerOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const savedCommunities = localStorage.getItem("communities");
+    if (savedCommunities) {
+      setCommunities(JSON.parse(savedCommunities));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("communities", JSON.stringify(communities));
+  }, [communities]);
+
+  return (
+    <div
+      className={`app-container flex flex-col h-full   ${
+        isCommunityDrawerOpen && !isMobile ? "drawer-open" : ""
+      }`}
+    >
+      <Navbar>
+        <NavbarGroup>
+          <NavbarHeading>
+            <EntityTitle
+              title="Alarm Community System"
+              icon="home"
+              subtitle="Admin Panel"
+            />
+          </NavbarHeading>
+        </NavbarGroup>
+        <NavbarGroup align="right" className=" gap-1">
+          <Button
+            icon="add"
+            text="Create Community"
+            intent="success"
+            onClick={handleCreateCommunity}
+          />
+          <Popover
+            content={
+              <Menu title="Settings">
+                <MenuItem
+                  text="Dark Mode"
+                  icon="moon"
+                  intent="primary"
+                  onClick={() => setIsDarkMode((prev) => !prev)}
+                />
+                <MenuItem
+                  text="Generate Sample Data"
+                  icon="database"
+                  intent="warning"
+                  onClick={handleGenerateSampleData}
+                />
+                <MenuItem
+                  text="Show Logs"
+                  icon="history"
+                  onClick={handleShowLogs}
+                />
+              </Menu>
+            }
+          >
+            <Button intent="primary" icon="cog" />
+          </Popover>
+          {selectedContent?.title !== "Dashboard" && (
+            <Button
+              icon="dashboard"
+              onClick={() => {
+                setSelectedContent({
+                  title: "Dashboard",
+                  component: <Dashboard />,
+                });
+                {
+                  isMobile && setIsDrawerOpen(true);
+                }
+              }}
+            />
+          )}
+        </NavbarGroup>
+      </Navbar>
+      <AlertComponent
+        isOpen={alarmAlertOpen}
+        onClose={() => setAlarmAlertOpen(false)}
+        onConfirm={confirmToggleAlarm}
+        title="Toggle Alarm Status"
+        content={
+          <p>
+            Are you sure you want to switch the alarm status for
+            {alertTarget && "address" in alertTarget ? alertTarget.address : ""}
+            ? This will notify all community members.
+          </p>
+        }
+        intent={Intent.DANGER}
+        confirmButtonText="Toggle Alarm"
+      />
+
+      <AlertComponent
+        isOpen={deleteAlertOpen}
+        onClose={() => setDeleteAlertOpen(false)}
+        onConfirm={confirmDeleteCommunity}
+        title="Confirm Community Deletion"
+        content={
+          <p>
+            Are you sure you want to delete the community{" "}
+            {alertTarget && "name" in alertTarget ? alertTarget.name : ""}? This
+            action cannot be undone.
+          </p>
+        }
+        intent={Intent.DANGER}
+        confirmButtonText="Delete Community"
+      />
+
+      <div className="flex flex-col md:flex-row p-3 gap-3 ">
+        <Card className="w-full min-h-screen md:w-1/2 overflow-auto">
+          <Tree
+            contents={treeNodes}
+            onNodeClick={handleNodeClick}
+            onNodeExpand={handleNodeExpand}
+            onNodeCollapse={handleNodeCollapse}
+          />
+        </Card>
+        {/* {JSON.stringify(selectedContent)} */}
+
+        {!isMobile &&
+          (selectedContent ? (
+            <div className=" w-1/2 min-h-screen">
+              <DetailsComponent
+                content={selectedContent}
+                onClose={() => {
+                  setSelectedContent(null);
+                  setIsDialogOpen(false);
+                }}
+              />
+            </div>
+          ) : // ) : selectedCommunity ? (
+          //   <CommunityDetails
+          //     community={selectedCommunity}
+          //     onHouseholdSelect={handleHouseholdSelect}
+          //     onPersonSelect={handlePersonSelect}
+          //     onAlarmTrigger={handleAlarmTrigger}
+          //   />
+          null)}
+      </div>
+
+      <Drawer
+        isOpen={isLogsDrawerOpen}
+        onClose={closeLogsDrawer}
+        className={isDarkMode ? "bp5-dark" : "bp5-light"}
+        title="Audit Logs"
+        position={Position.LEFT}
+        size={DrawerSize.SMALL}
+      >
+        <LogsView logs={logs} />
+      </Drawer>
+
+      <Drawer
+        isOpen={isDrawerOpen}
+        className={isDarkMode ? "bp5-dark" : "bp5-light"}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          setSelectedContent(null);
+        }}
+        title={selectedContent ? selectedContent.title : "Details"}
+        size={isMobile ? DrawerSize.LARGE : DrawerSize.STANDARD}
+        icon="info-sign"
+        position={Position.RIGHT}
+      >
+        <Card compact={true} className={Classes.DRAWER_BODY}>
+          {selectedContent && (
+            <DetailsComponent
+              content={selectedContent}
+              onClose={() => setIsDrawerOpen(false)}
+            />
+          )}
+        </Card>
+        <div className={Classes.DRAWER_FOOTER}>
+          <Button
+            text="Close"
+            onClick={() => {
+              setIsDrawerOpen(false);
+              setSelectedContent(null);
+            }}
+          />
+        </div>
+      </Drawer>
+
+      <Dialog
+        isOpen={isDialogOpen}
+        className={isDarkMode ? "bp5-dark" : "bp5-light"}
+        onClose={() => setIsDialogOpen(false)}
+        title={selectedContent ? selectedContent.title : "Details"}
+        icon="info-sign"
+      >
+        <DialogBody>
+          {selectedContent && (
+            <DetailsComponent
+              content={selectedContent}
+              onClose={() => setIsDialogOpen(false)}
+            />
+          )}
+        </DialogBody>
+        <DialogFooter
+          actions={
+            <Button
+              text="Close"
+              onClick={() => {
+                setIsDialogOpen(false);
+                setSelectedContent(null);
+              }}
+            />
+          }
+        />
+      </Dialog>
+    </div>
+  );
+};
+
+interface CommunityDetailsProps {
+  community: Community;
+  onHouseholdSelect: (household: Household) => void;
+  onPersonSelect: (person: Person) => void;
+  onAlarmTrigger: (household: Household) => void;
+}
+
+const CommunityDetails: React.FC<CommunityDetailsProps> = React.memo(
+  ({ community, onHouseholdSelect, onPersonSelect, onAlarmTrigger }) => {
+    const { handleCreateHousehold } = useUiActions();
+    const { deleteCommunity } = useCommunityActions();
+    const [deleteAlertOpen, setDeleteAlertOpen] = useAtom(deleteAlertOpenAtom);
+    const [alertTarget, setAlertTarget] = useAtom(alertTargetAtom);
+
+    const removeCommunity = async (community: Community) => {
+      setAlertTarget(community);
+      setDeleteAlertOpen(true);
+    };
+
+    const confirmDeleteCommunity = async () => {
+      if (alertTarget && "id" in alertTarget) {
+        try {
+          await deleteCommunity(alertTarget.id.toString());
+          console.log("Community deleted successfully");
+          (await AppToaster).show({
+            message: `Community ${alertTarget.id} deleted successfully`,
+            intent: "success",
+          });
+        } catch (error) {
+          console.error("Failed to delete community:", error);
+          (await AppToaster).show({
+            message: `Failed to delete community ${alertTarget.id}`,
+            intent: "danger",
+          });
+        }
+      }
+      setDeleteAlertOpen(false);
+      setAlertTarget(null);
+    };
+
+    return (
+      <Section
+        title={community.name}
+        subtitle={`Phone: ${community.phoneNumber}`}
+        icon="home"
+        compact={true}
+        elevation={Elevation.ONE}
+        rightElement={
+          <Popover
+            content={
+              <Menu>
+                <MenuItem
+                  icon="people"
+                  text="Add Household"
+                  intent="primary"
+                  onClick={() => handleCreateHousehold(community.id.toString())}
+                />
+                <MenuItem
+                  text="Delete Community"
+                  icon="trash"
+                  intent="danger"
+                  onClick={() => removeCommunity(community)}
+                />
+              </Menu>
+            }
+          >
+            <Button intent="primary" text="Actions" />
+          </Popover>
+        }
+      >
+        <SectionCard padded={false} className=" flex  gap-2 mb-4">
+          <CardList>
+            {community.households && community.households.length > 0 ? (
+              community.households.map((household) => (
+                <Card
+                  key={household.id}
+                  interactive={true}
+                  className=" flex justify-between items-center "
+                >
+                  <EntityTitle
+                    title={<p className=" min-w-40">{household.address}</p>}
+                    icon="office"
+                    className=" w-full"
+                    subtitle={household.alarmDevice.id.toString()}
+                    tags={
+                      household.alarmDevice.status === "active" ? (
+                        <Tag intent="danger" minimal={true}>
+                          Alarm Active
+                        </Tag>
+                      ) : (
+                        <Tag intent="success" minimal={true}>
+                          Alarm Inactive
+                        </Tag>
+                      )
+                    }
+                  />
+
+                  <Popover
+                    content={
+                      <Menu>
+                        <MenuItem
+                          icon="info-sign"
+                          text="Details"
+                          onClick={(
+                            event: React.MouseEvent<HTMLElement, MouseEvent>
+                          ) => onHouseholdSelect(household)}
+                        />
+                        <MenuDivider />
+                        <MenuItem
+                          icon="warning-sign"
+                          text={
+                            household.alarmDevice.status === "active"
+                              ? "Disable Alarm"
+                              : "Trigger Alarm"
+                          }
+                          intent={
+                            household.alarmDevice.status === "active"
+                              ? "warning"
+                              : "danger"
+                          }
+                          onClick={() => onAlarmTrigger(household)}
+                        />
+                      </Menu>
+                    }
+                    position={Position.RIGHT}
+                  >
+                    <Button
+                      intent="warning"
+                      minimal={true}
+                      outlined={true}
+                      icon="more"
+                      small={true}
+                    />
+                  </Popover>
+                </Card>
+              ))
+            ) : (
+              <NonIdealState
+                icon="home"
+                title="No households in this community"
+              />
+            )}
+          </CardList>
+        </SectionCard>
+      </Section>
+    );
+  },
+  (prevProps, nextProps) => {
+    return prevProps.community === nextProps.community;
+  }
+);
+function useWindowSize() {
+  const [windowSize, setWindowSize] = useState<{
+    width: number | undefined;
+    height: number | undefined;
+  }>({
+    width: undefined,
+    height: undefined,
+  });
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return windowSize;
+}
+
+const LogsView: React.FC<{ logs: Log[] }> = ({ logs }) => {
+  return (
+    <Menu>
+      {logs.map((log, index) => (
+        <MenuItem
+          key={index}
+          text={log.message}
+          label={new Date(log.timestamp).toLocaleString()}
+        />
+      ))}
+    </Menu>
+  );
+};
+
+interface HouseholdDetailsProps {
+  household: Household;
+  onClose: () => void;
+}
+
+const HouseholdDetails: React.FC<HouseholdDetailsProps> = React.memo(
+  ({ household, onClose }) => {
+    const { handleCreatePerson } = useUiActions();
+    const [isDialogOpen, setIsDialogOpen] = useAtom(isDialogOpenAtom);
+    const [selectedContent, setSelectedContent] = useAtom(selectedContentAtom);
+    const [selectedCommunity, setSelectedCommunity] = useAtom(
+      selectedCommunityAtom
+    );
+
+    return (
+      <div>
+        <Section
+          title={household.address}
+          compact={true}
+          icon="people"
+          subtitle={
+            <>
+              <p className=" text-xs">{household.alarmDevice.id}</p>
+              {household.alarmDevice.status === "active" ? (
+                <Tag className=" text-xs" intent="warning" minimal={true}>
+                  triggered at {new Date().toLocaleTimeString()}
+                </Tag>
+              ) : (
+                <Tag className=" text-xs" intent="success" minimal={true}>
+                  inactive
+                </Tag>
+              )}
+            </>
+          }
+          rightElement={
+            <Button
+              icon="add"
+              text="Add Person"
+              intent="primary"
+              onClick={() => handleCreatePerson(household.id.toString())}
+            />
+          }
+        >
+          <SectionCard padded={false}>
+            <CardList>
+              {household.people && household.people.length > 0 ? (
+                household.people.map((person) => (
+                  <Card
+                    key={person.id}
+                    interactive={true}
+                    onClick={() => {
+                      selectedCommunity &&
+                        setSelectedContent({
+                          title: person.name,
+                          component: (
+                            <PersonDetails
+                              person={person}
+                              household={household}
+                              community={selectedCommunity}
+                              onClose={onClose}
+                            />
+                          ),
+                        });
+
+                      setIsDialogOpen(true);
+                    }}
+                  >
+                    <EntityTitle
+                      title={
+                        <p className=" font-semibold min-w-40">{person.name}</p>
+                      }
+                      // icon="person"
+                      icon={
+                        <Tag icon="person" minimal={true} intent="primary" />
+                      }
+                      tags={
+                        <Tag minimal={true} intent="primary">
+                          {person.phone}
+                        </Tag>
+                      }
+                    />
+                  </Card>
+                ))
+              ) : (
+                <NonIdealState
+                  className=" m-4"
+                  icon="person"
+                  title="No people in this household"
+                />
+              )}
+            </CardList>
+          </SectionCard>
+        </Section>
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return prevProps.household === nextProps.household;
+  }
+);
+
+export default App;
+
+// Save point 23802482424
+// save point 284902902902
+
+================================================================================
+
+File: index.css
+--------------------------------------------------------------------------------
+
+@import "normalize.css";
+@import "@blueprintjs/core/lib/css/blueprint.css";
+
+@import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.striped {
+  background: repeating-linear-gradient(
+    45deg,
+    #5F6B7C,
+    #738091 10px,
+    #8F99A8 10px,
+    #ABB3BF 10px,
+    #C5CBD3 20px
+    
+  );
+
+}
+
+
+
+.app-container {
+    display: flex;
+  }
+  
+  .main-content {
+    flex: 1;
+    transition: margin-right 0.3s ease-in-out;
+  }
+  
+  .sliding-drawer {
+    position: fixed;
+    top: 0;
+    right: -400px; 
+    width: 400px; 
+    height: 100%;
+    background-color: white;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: right 0.3s ease-in-out;
+  }
+  
+  .sliding-drawer.open {
+    right: 0;
+  }
+  
+  .app-container.drawer-open .main-content {
+    margin-right: 400px; /* Should match the drawer width */
+  }
+  
+  .sliding-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .sliding-drawer-content {
+    padding: 20px;
+  }
+
+
+  
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* ForceDirectedGraph.css */
+.graph-container {
+  position: relative;
+  width: 100%;
+  height: 800px;
+}
+
+.node-details {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 15px;
+  /* border-radius: 5px; */
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+
+.selected-node {
+  background-color: #e0f7fa !important;
+  color: #00796b;
+}
+
+================================================================================
+
+File: main.tsx
+--------------------------------------------------------------------------------
+import ReactDOM from "react-dom/client";
+// import App from "./App.tsx";
+// import App from "./claude.tsx";
+import "./index.css";
+import { Colors, OverlayToaster, OverlaysProvider } from "@blueprintjs/core";
+import { darkModeAtom } from "./store/atom";
+import { useAtom } from "jotai";
+import App from "./src/App";
+
+const Main = () => {
+  const [isDarkMode] = useAtom(darkModeAtom);
+  return (
+    <OverlaysProvider>
+      <div
+        style={{
+          background: isDarkMode ? Colors.DARK_GRAY1 : Colors.LIGHT_GRAY1,
+        }}
+        className={`${
+          isDarkMode ? "bp5-dark" : "bp5-light"
+        } min-h-screen w-full`}
+      >
+        <div className="toaster-container">
+          <OverlayToaster />
+        </div>
+        <App />
+      </div>
+    </OverlaysProvider>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  // <React.StrictMode>
+  <>
+    <Main />
+  </>
+  // </React.StrictMode>
+);
+
+================================================================================
+
+File: toaster.ts
+--------------------------------------------------------------------------------
+// toaster.ts
+import { OverlayToaster, Position } from "@blueprintjs/core";
+
+export const AppToaster = OverlayToaster.createAsync({
+  className: "app-toaster",
+  position: Position.TOP,
+});
+
+================================================================================
+
+File: types.ts
+--------------------------------------------------------------------------------
+// types.ts
+
+// Type definitions
+export interface Person {
+  id: number;
+  name: string;
+  phone: string;
+}
+
+export interface AlarmDevice {
+  id: string;
+  status: "active" | "inactive";
+}
+
+export interface Household {
+  id: number;
+  address: string;
+  people: Person[];
+  alarmDevice: AlarmDevice;
+}
+
+export interface Community {
+  id: number;
+  name: string;
+  phoneNumber: string;
+  households: Household[];
+}
+
+export interface Log {
+  timestamp: string;
+  message: string;
+}
+
+================================================================================
+
+File: vite-env.d.ts
+--------------------------------------------------------------------------------
+/// <reference types="vite/client" />
+
+================================================================================
+
+File: assets\react.svg
+--------------------------------------------------------------------------------
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+================================================================================
+
+File: components\Alert.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { Alert, Intent } from "@blueprintjs/core";
+
+interface AlertComponentProps {
+  isOpen: boolean;
+  onClose: (confirmed: boolean) => void;
+  onConfirm: () => void;
+  title: string;
+  content: React.ReactNode;
+  intent?: Intent;
+  confirmButtonText?: string;
+  cancelButtonText?: string;
+}
+
+const AlertComponent: React.FC<AlertComponentProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  content,
+  intent = Intent.PRIMARY,
+  confirmButtonText = "Confirm",
+  cancelButtonText = "Cancel",
+}) => {
+  return (
+    <Alert
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      intent={intent}
+      cancelButtonText={cancelButtonText}
+      confirmButtonText={confirmButtonText}
+      icon="warning-sign"
+    >
+      <h3>{title}</h3>
+      {content}
+    </Alert>
+  );
+};
+
+export default AlertComponent;
+
+================================================================================
+
+File: components\dashboard.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import {
+  Card,
+  H3,
+  H5,
+  Button,
+  Icon,
+  Tag,
+  Section,
+  SectionCard,
+  CardList,
+  EntityTitle,
+} from "@blueprintjs/core";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+import {
+  communitiesAtom,
+  isDialogOpenAtom,
+  isDrawerOpenAtom,
+  logsAtom,
+  selectedContentAtom,
+} from "../store/atom";
+import { useAtom } from "jotai";
+
+const data = [
+  { name: "Community A", households: 20, people: 60, activeAlarms: 2 },
+  { name: "Community B", households: 15, people: 45, activeAlarms: 1 },
+  { name: "Community C", households: 25, people: 75, activeAlarms: 3 },
+];
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+
+const Dashboard = () => {
+  const [communities, setCommunities] = useAtom(communitiesAtom);
+  // transform community data into summary data
+  const data = communities.map((community) => {
+    const households = Array.isArray(community.households)
+      ? community.households
+      : [];
+
+    const peopleCount = households.reduce((acc, curr) => {
+      const people = Array.isArray(curr.people) ? curr.people.length : 0;
+      return acc + people;
+    }, 0);
+
+    const activeAlarmsCount = households.reduce((acc, curr) => {
+      const isAlarmActive =
+        curr.alarmDevice && curr.alarmDevice.status === "active" ? 1 : 0;
+      return acc + isAlarmActive;
+    }, 0);
+
+    return {
+      name: community.name || "Unknown",
+      households: households.length,
+      people: peopleCount,
+      activeAlarms: activeAlarmsCount,
+    };
+  });
+
+  const totalCommunities = data.length;
+  const totalHouseholds = data.reduce((acc, curr) => acc + curr.households, 0);
+  const totalPeople = data.reduce((acc, curr) => acc + curr.people, 0);
+  const totalActiveAlarms = data.reduce(
+    (acc, curr) => acc + curr.activeAlarms,
+    0
+  );
+
+  const pieData = [
+    { name: "Households", value: totalHouseholds },
+    { name: "People", value: totalPeople },
+    { name: "Active Alarms", value: totalActiveAlarms },
+  ];
+
+  return (
+    <Section
+      title="Dashboard"
+      icon="dashboard"
+      subtitle={
+        <p className=" text-xs">
+          Welcome to the ACS Dashboard. Here you can view a summary of the ACS
+          system, charts, recent activity, and quick actions.
+        </p>
+      }
+    >
+      <SectionCard
+        // padded={false}
+        title="Summary"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1 "
+      >
+        <Card>
+          <EntityTitle
+            icon="globe-network"
+            title="Total Communities"
+            tags={
+              <Tag large={true} intent="primary">
+                {totalCommunities}
+              </Tag>
+            }
+          />
+        </Card>
+        <Card>
+          <EntityTitle
+            icon="home"
+            title="Total Households"
+            tags={
+              <Tag large={true} intent="success">
+                {totalHouseholds}
+              </Tag>
+            }
+          />
+        </Card>
+        <Card>
+          <EntityTitle
+            icon="people"
+            title="Total People"
+            tags={
+              <Tag large={true} intent="warning">
+                {totalPeople}
+              </Tag>
+            }
+          />
+        </Card>
+        <Card>
+          <EntityTitle
+            icon="warning-sign"
+            title="Active Alarms"
+            tags={
+              <Tag large={true} intent="danger">
+                {totalActiveAlarms}
+              </Tag>
+            }
+          />
+        </Card>
+      </SectionCard>
+
+      <SectionCard
+        title="Charts"
+        className="grid grid-cols-1 lg:grid-cols-2  gap-1"
+      >
+        <Card>
+          <H5 className="mb-4">Community Overview</H5>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="households" fill="#8884d8" />
+                <Bar dataKey="people" fill="#82ca9d" />
+                <Bar dataKey="activeAlarms" fill="#ffc658" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card>
+          <H5 className="mb-4">Distribution</H5>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </SectionCard>
+
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 ">
+        <SectionCard title="Recent Activity">
+          <CardList>
+            {[
+              {
+                title: "New household added to Community A",
+                subtitle: "2 hours ago",
+              },
+              {
+                title: "Alarm triggered in Community B",
+                subtitle: "5 hours ago",
+              },
+              {
+                title: "New person added to Community C",
+                subtitle: "1 day ago",
+              },
+            ].map((activity, index) => (
+              <Card key={index}>
+                <EntityTitle
+                  title={activity.title}
+                  subtitle={activity.subtitle}
+                />
+              </Card>
+            ))}
+          </CardList>
+        </SectionCard>
+
+        <SectionCard title="Quick Actions">
+          <div className="space-y-2">
+            <Button icon="add" text="Add New Community" fill />
+            <Button icon="warning-sign" text="View All Active Alarms" fill />
+            <Button icon="people" text="Manage Users" fill />
+          </div>
+        </SectionCard>
+      </div> */}
+    </Section>
+  );
+};
+
+export default Dashboard;
+
+================================================================================
+
+File: components\DataView.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import ReactFlow, { Node, Edge } from "react-flow-renderer";
+
+// Define the nodes and edges separately
+const nodes: Node[] = [
+  {
+    id: "rawData",
+    data: { label: "Raw Data" },
+    position: { x: 50, y: 50 },
+    style: { background: "#95a5a6", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "cleanedData",
+    data: { label: "Cleaned Data" },
+    position: { x: 200, y: 50 },
+    style: { background: "#9b59b6", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "transformedData",
+    data: { label: "Transformed Data" },
+    position: { x: 350, y: 50 },
+    style: { background: "#34495e", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "patientData",
+    data: { label: "Patient Data" },
+    position: { x: 50, y: 200 },
+    style: { background: "#3498db", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "doctorData",
+    data: { label: "Doctor Data" },
+    position: { x: 200, y: 200 },
+    style: { background: "#2ecc71", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "hospitalData",
+    data: { label: "Hospital Data" },
+    position: { x: 350, y: 200 },
+    style: { background: "#e74c3c", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "labData",
+    data: { label: "Lab Data" },
+    position: { x: 500, y: 200 },
+    style: { background: "#f39c12", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "ontologyPatient",
+    data: { label: "Patient" },
+    position: { x: 50, y: 350 },
+    style: { background: "#3498db", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "ontologyDoctor",
+    data: { label: "Doctor" },
+    position: { x: 200, y: 350 },
+    style: { background: "#2ecc71", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "ontologyHospital",
+    data: { label: "Hospital" },
+    position: { x: 350, y: 350 },
+    style: { background: "#e74c3c", padding: "10px", borderRadius: "8px" },
+  },
+  {
+    id: "ontologyLab",
+    data: { label: "Lab" },
+    position: { x: 500, y: 350 },
+    style: { background: "#f39c12", padding: "10px", borderRadius: "8px" },
+  },
+];
+
+const edges: Edge[] = [
+  { id: "e1", source: "rawData", target: "cleanedData" },
+  { id: "e2", source: "cleanedData", target: "transformedData" },
+  { id: "e3", source: "transformedData", target: "patientData" },
+  { id: "e4", source: "transformedData", target: "doctorData" },
+  { id: "e5", source: "transformedData", target: "hospitalData" },
+  { id: "e6", source: "transformedData", target: "labData" },
+  { id: "e7", source: "patientData", target: "ontologyPatient" },
+  { id: "e8", source: "doctorData", target: "ontologyDoctor" },
+  { id: "e9", source: "hospitalData", target: "ontologyHospital" },
+  { id: "e10", source: "labData", target: "ontologyLab" },
+];
+
+export const DataView: React.FC = () => {
+  return (
+    <div className="App border">
+      <h1>Health Ontology Graph</h1>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        snapToGrid={true}
+        snapGrid={[16, 16]}
+      />
+    </div>
+  );
+};
+
+================================================================================
+
+File: components\DetailsComponents.tsx
+--------------------------------------------------------------------------------
+export const DetailsComponent: React.FC<{
+  content: { title: string; component: React.ReactNode };
+  onClose: () => void;
+}> = ({ content, onClose }) => {
+  return (
+    <div className=" z-50">
+      {/* <h2 className="text-2xl font-bold mb-4">{content.title}</h2> */}
+      {content.component}
+      {/* {!isMobile && <Button className="mt-4" text="Back" onClick={onClose} />} */}
+    </div>
+  );
+};
+
+================================================================================
+
+File: components\CommunityDetails\ComunityDetails.tsx
+--------------------------------------------------------------------------------
+
+================================================================================
+
+File: components\CommunityDetails\index.ts
+--------------------------------------------------------------------------------
+
+================================================================================
+
+File: components\Displays\Person.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { memo } from "react";
+import {
+  Section,
+  SectionCard,
+  Card,
+  Tag,
+  H5,
+  UL,
+  Elevation,
+} from "@blueprintjs/core";
+import { Community, Household, Person } from "../../types";
+
+interface PersonDetailsProps {
+  person: Person;
+  household: Household;
+  community: Community;
+  onClose: () => void;
+}
+
+const PersonDetails: React.FC<PersonDetailsProps> = ({
+  person,
+  household,
+  community,
+  onClose,
+}) => {
+  return (
+    <Section
+      title={person.name}
+      icon="person"
+      subtitle={person.phone}
+      compact={true}
+      elevation={Elevation.ONE}
+      rightElement={
+        <Tag intent="primary" icon="home">
+          {community.name}
+        </Tag>
+      }
+    >
+      <SectionCard padded={false}>
+        <Card>
+          <H5>Personal Information</H5>
+          <UL>
+            <li>Name: {person.name}</li>
+            <li>Phone: {person.phone}</li>
+            {/* {person.email && <li>Email: {person.email}</li>}
+            {person.role && <li>Role: {person.role}</li>} */}
+          </UL>
+
+          <H5>Household Information</H5>
+          <UL>
+            <li>Address: {household.address}</li>
+            <li>Alarm Device ID: {household.alarmDevice.id}</li>
+            <li>
+              Alarm Status:
+              <Tag
+                intent={
+                  household.alarmDevice.status === "active"
+                    ? "danger"
+                    : "success"
+                }
+                minimal={true}
+              >
+                {household.alarmDevice.status}
+              </Tag>
+            </li>
+          </UL>
+
+          <H5>Community Information</H5>
+          <UL>
+            <li>Community Name: {community.name}</li>
+            <li>Community Phone: {community.phoneNumber}</li>
+          </UL>
+
+          <Tag intent="primary" large={true}>
+            {`${community.name} > ${household.address} > ${person.name}`}
+          </Tag>
+        </Card>
+      </SectionCard>
+    </Section>
+  );
+};
+
+export default memo(PersonDetails, (prevProps, nextProps) => {
+  return (
+    prevProps.person === nextProps.person &&
+    prevProps.household === nextProps.household &&
+    prevProps.community === nextProps.community
+  );
+});
+
+================================================================================
+
+File: forms\community-form.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { Button, Card, FormGroup, InputGroup, Intent } from "@blueprintjs/core";
+
+interface Community {
+  id?: number;
+  name: string;
+  phoneNumber: string;
+}
+
+interface CommunityFormProps {
+  onSubmit: (data: Community) => void;
+  initialData?: Partial<Community>;
+}
+
+const CommunityForm: React.FC<CommunityFormProps> = ({
+  onSubmit,
+  initialData = {},
+}) => {
+  const [formData, setFormData] = useState<Community>({
+    name: initialData.name || "",
+    phoneNumber: initialData.phoneNumber || "",
+    ...initialData,
+  });
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Card>
+      <form onSubmit={handleSubmit}>
+        <FormGroup
+          helperText="Enter the community name"
+          label="Community Name"
+          labelFor="name-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="name-input"
+            name="name"
+            placeholder="e.g., Oakridge Community"
+            value={formData.name}
+            onChange={handleInputChange}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <FormGroup
+          helperText="Enter the community phone number"
+          label="Phone Number"
+          labelFor="phone-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="phone-input"
+            name="phoneNumber"
+            placeholder="e.g., 555-OAKRIDGE"
+            value={formData.phoneNumber}
+            onChange={handleInputChange}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <Button type="submit" intent={Intent.PRIMARY} text="Save Community" />
+      </form>
+    </Card>
+  );
+};
+
+export default CommunityForm;
+
+================================================================================
+
+File: forms\house-hold-form.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import {
+  Button,
+  FormGroup,
+  InputGroup,
+  NumericInput,
+  Intent,
+  Card,
+} from "@blueprintjs/core";
+
+interface Household {
+  id?: number;
+  address: string;
+  alarmDeviceId: string;
+  alarmStatus: "active" | "inactive";
+  numberOfResidents: number;
+}
+
+interface HouseholdFormProps {
+  onSubmit: (data: Household) => void;
+  initialData?: Partial<Household>;
+}
+
+const HouseholdForm: React.FC<HouseholdFormProps> = ({
+  onSubmit,
+  initialData = {},
+}) => {
+  const [formData, setFormData] = useState<Household>({
+    address: initialData.address || "",
+    alarmDeviceId: initialData.alarmDeviceId || "",
+    alarmStatus: initialData.alarmStatus || "inactive",
+    numberOfResidents: initialData.numberOfResidents || 1,
+    ...initialData,
+  });
+
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = event.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleNumericInputChange =
+    (name: keyof Household) => (valueAsNumber: number) => {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: valueAsNumber,
+      }));
+    };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Card>
+      <form onSubmit={handleSubmit}>
+        <FormGroup
+          helperText="Enter the household address"
+          label="Address"
+          labelFor="address-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="address-input"
+            name="address"
+            placeholder="123 Main St, City, State, ZIP"
+            value={formData.address}
+            onChange={handleInputChange}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <FormGroup
+          helperText="Enter the alarm device ID"
+          label="Alarm Device ID"
+          labelFor="alarm-device-input"
+        >
+          <InputGroup
+            id="alarm-device-input"
+            name="alarmDeviceId"
+            placeholder="e.g., ALM-001"
+            value={formData.alarmDeviceId}
+            onChange={handleInputChange}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <FormGroup
+          helperText="Select the alarm status"
+          label="Alarm Status"
+          labelFor="alarm-status-input"
+        >
+          <div className="bp3-select">
+            <select
+              id="alarm-status-input"
+              name="alarmStatus"
+              value={formData.alarmStatus}
+              onChange={handleInputChange}
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </FormGroup>
+
+        <FormGroup
+          helperText="Enter the number of residents"
+          label="Number of Residents"
+          labelFor="residents-input"
+        >
+          <NumericInput
+            id="residents-input"
+            name="numberOfResidents"
+            value={formData.numberOfResidents}
+            onValueChange={handleNumericInputChange("numberOfResidents")}
+            min={1}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <Button type="submit" intent={Intent.PRIMARY} text="Save Household" />
+      </form>
+    </Card>
+  );
+};
+
+export default HouseholdForm;
+
+================================================================================
+
+File: forms\person-form.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { Button, Card, FormGroup, InputGroup, Intent } from "@blueprintjs/core";
+
+interface Person {
+  id?: number;
+  name: string;
+  phone: string;
+}
+
+interface PersonFormProps {
+  onSubmit: (data: Person) => void;
+  initialData?: Partial<Person>;
+}
+
+const PersonForm: React.FC<PersonFormProps> = ({
+  onSubmit,
+  initialData = {},
+}) => {
+  const [formData, setFormData] = useState<Person>({
+    name: initialData.name || "",
+    phone: initialData.phone || "",
+    ...initialData,
+  });
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Card>
+      <form onSubmit={handleSubmit}>
+        <FormGroup
+          helperText="Enter the person's name"
+          label="Name"
+          labelFor="name-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="name-input"
+            name="name"
+            placeholder="e.g., John Doe"
+            value={formData.name}
+            onChange={handleInputChange}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <FormGroup
+          helperText="Enter the person's phone number"
+          label="Phone Number"
+          labelFor="phone-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="phone-input"
+            name="phone"
+            placeholder="e.g., 555-1234"
+            value={formData.phone}
+            onChange={handleInputChange}
+            intent={Intent.PRIMARY}
+          />
+        </FormGroup>
+
+        <Button type="submit" intent={Intent.PRIMARY} text="Save Person" />
+      </form>
+    </Card>
+  );
+};
+
+export default PersonForm;
+
+================================================================================
+
+File: hooks\useCommunityActions.ts
+--------------------------------------------------------------------------------
+import { useAtom } from "jotai";
+import {
+  communitiesAtom,
+  isDialogOpenAtom,
+  isDrawerOpenAtom,
+  logsAtom,
+} from "../store/atom";
+import { AppToaster } from "../toaster";
+import { Community } from "../types";
+import { api } from "../api";
+import CommunityForm from "../forms/community-form";
+
+export const useCommunityActions = () => {
+  const [communities, setCommunities] = useAtom(communitiesAtom);
+  const [isDialogOpen, setIsDialogOpen] = useAtom(isDialogOpenAtom);
+  const [isDrawerOpen, setIsDrawerOpen] = useAtom(isDrawerOpenAtom);
+  const [logs, setLogs] = useAtom(logsAtom);
+
+  const addLog = async (message: string) => {
+    setLogs((prevLogs) => [
+      ...prevLogs,
+      { timestamp: new Date().toISOString(), message },
+    ]);
+    (await AppToaster).show({ message: message });
+  };
+
+  const getCommunities = async () => {
+    try {
+      const result = await api.getCommunities();
+      setCommunities(result.communities);
+      addLog("Retrieved communities successfully");
+    } catch (error) {
+      console.error("Error fetching communities:", error);
+      addLog(`Failed to fetch communities: ${error}`);
+    }
+  };
+
+  const createCommunity = (data: Omit<Community, "id" | "households">) => {
+    return new Promise<Community>(async (resolve, reject) => {
+      try {
+        const newCommunity = await api.createCommunity(data);
+        setCommunities((prevCommunities) => [...prevCommunities, newCommunity]);
+        addLog(`Created new community: ${newCommunity.name}`);
+        resolve(newCommunity);
+      } catch (error) {
+        console.error("Error creating community:", error);
+        addLog(`Failed to create community: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const updateCommunity = (
+    communityId: string,
+    data: Omit<Community, "id" | "households">
+  ) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.updateCommunity(communityId, data);
+        setCommunities((prevCommunities) =>
+          prevCommunities.map((community) =>
+            community.id.toString() === communityId
+              ? { ...community, ...data }
+              : community
+          )
+        );
+        addLog(`Updated community: ${data.name}`);
+        resolve();
+      } catch (error) {
+        console.error("Error updating community:", error);
+        addLog(`Failed to update community: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const deleteCommunity = (communityId: string) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.deleteCommunity(communityId);
+        setCommunities((prevCommunities) =>
+          prevCommunities.filter(
+            (community) => community.id.toString() !== communityId
+          )
+        );
+        addLog(`Deleted community with ID: ${communityId}`);
+        resolve();
+      } catch (error) {
+        console.error("Error deleting community:", error);
+        addLog(`Failed to delete community: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  return {
+    getCommunities,
+    createCommunity,
+    updateCommunity,
+    deleteCommunity,
+    addLog,
+  };
+};
+
+export default useCommunityActions;
+
+================================================================================
+
+File: hooks\useHouseholdActions.ts
+--------------------------------------------------------------------------------
+import { useAtom } from "jotai";
+import { communitiesAtom, logsAtom } from "../store/atom";
+import { AppToaster } from "../toaster";
+import { Household } from "../types";
+import { api } from "../api";
+
+export const useHouseholdActions = () => {
+  const [communities, setCommunities] = useAtom(communitiesAtom);
+  const [logs, setLogs] = useAtom(logsAtom);
+
+  const addLog = async (message: string) => {
+    setLogs((prevLogs) => [
+      ...prevLogs,
+      { timestamp: new Date().toISOString(), message },
+    ]);
+    (await AppToaster).show({ message: message });
+  };
+
+  const getHouseholds = async (communityId: string) => {
+    try {
+      const result = await api.getCommunityHouseholds(communityId);
+      setCommunities((prevCommunities) =>
+        prevCommunities.map((community) =>
+          community.id.toString() === communityId
+            ? { ...community, households: result.households }
+            : community
+        )
+      );
+      addLog(`Retrieved households for community ${communityId}`);
+      return result.households;
+    } catch (error) {
+      console.error("Error fetching households:", error);
+      addLog(`Failed to fetch households: ${error}`);
+      throw error;
+    }
+  };
+
+  const createHousehold = (
+    communityId: string,
+    data: Omit<Household, "id" | "people">
+  ) => {
+    return new Promise<Household>(async (resolve, reject) => {
+      try {
+        const newHousehold = await api.createCommunityHousehold(
+          communityId,
+          data
+        );
+
+        // refetch community
+        await api
+          .getCommunities()
+          .then((fetchedCommunities) =>
+            setCommunities(fetchedCommunities.communities)
+          );
+
+        // setCommunities((prevCommunities) =>
+        //   prevCommunities.map((community) =>
+        //     community.id.toString() === communityId
+        //       ? {
+        //           ...community,
+        //           households: [...(community.households || []), newHousehold],
+        //         }
+        //       : community
+        //   )
+        // );
+        addLog(`Created new household: ${newHousehold.address}`);
+        resolve(newHousehold);
+      } catch (error) {
+        console.error("Error creating household:", error);
+        addLog(`Failed to create household: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const updateHousehold = (
+    householdId: string,
+    data: Omit<Household, "id" | "people">
+  ) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.updateHousehold(householdId, data);
+        setCommunities((prevCommunities) =>
+          prevCommunities.map((community) => ({
+            ...community,
+            households: (community.households || []).map((household) =>
+              household.id.toString() === householdId
+                ? { ...household, ...data }
+                : household
+            ),
+          }))
+        );
+        addLog(`Updated household: ${data.address}`);
+        resolve();
+      } catch (error) {
+        console.error("Error updating household:", error);
+        addLog(`Failed to update household: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const deleteHousehold = (householdId: string) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.deleteHousehold(householdId);
+        setCommunities((prevCommunities) =>
+          prevCommunities.map((community) => ({
+            ...community,
+            households: (community.households || []).filter(
+              (household) => household.id.toString() !== householdId
+            ),
+          }))
+        );
+        addLog(`Deleted household with ID: ${householdId}`);
+        resolve();
+      } catch (error) {
+        console.error("Error deleting household:", error);
+        addLog(`Failed to delete household: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const updateAlarmStatus = (householdId: string, status: string) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.updateAlarmStatus(householdId, status);
+        // refetch community
+        await api
+          .getCommunities()
+          .then((fetchedCommunities) =>
+            setCommunities(fetchedCommunities.communities)
+          );
+
+        addLog(`Updated alarm status for household ${householdId}: ${status}`);
+        resolve();
+      } catch (error) {
+        console.error("Error updating alarm status:", error);
+        addLog(`Failed to update alarm status: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  return {
+    getHouseholds,
+    createHousehold,
+    updateHousehold,
+    deleteHousehold,
+    updateAlarmStatus,
+    addLog,
+  };
+};
+
+export default useHouseholdActions;
+
+================================================================================
+
+File: hooks\usePersonActions.ts
+--------------------------------------------------------------------------------
+import { useAtom } from "jotai";
+import { communitiesAtom, logsAtom } from "../store/atom";
+import { AppToaster } from "../toaster";
+import { Person } from "../types";
+import { api } from "../api";
+
+export const usePersonActions = () => {
+  const [communities, setCommunities] = useAtom(communitiesAtom);
+  const [logs, setLogs] = useAtom(logsAtom);
+
+  const addLog = async (message: string) => {
+    setLogs((prevLogs) => [
+      ...prevLogs,
+      { timestamp: new Date().toISOString(), message },
+    ]);
+    (await AppToaster).show({ message: message });
+  };
+
+  const getPeople = async (householdId: string) => {
+    try {
+      const result = await api.getHouseholdPeople(householdId);
+      setCommunities((prevCommunities) =>
+        prevCommunities.map((community) => ({
+          ...community,
+          households: (community.households || []).map((household) =>
+            household.id.toString() === householdId
+              ? { ...household, people: result.people }
+              : household
+          ),
+        }))
+      );
+      addLog(`Retrieved people for household ${householdId}`);
+      return result.people;
+    } catch (error) {
+      console.error("Error fetching people:", error);
+      addLog(`Failed to fetch people: ${error}`);
+      throw error;
+    }
+  };
+
+  const createPerson = (householdId: string, data: Omit<Person, "id">) => {
+    return new Promise<Person>(async (resolve, reject) => {
+      try {
+        const newPerson = await api.createHouseholdPerson(householdId, data);
+        setCommunities((prevCommunities) =>
+          prevCommunities.map((community) => ({
+            ...community,
+            households: (community.households || []).map((household) =>
+              household.id.toString() === householdId
+                ? {
+                    ...household,
+                    people: [...(household.people || []), newPerson],
+                  }
+                : household
+            ),
+          }))
+        );
+        addLog(`Created new person: ${newPerson.name}`);
+        resolve(newPerson);
+      } catch (error) {
+        console.error("Error creating person:", error);
+        addLog(`Failed to create person: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const updatePerson = (personId: string, data: Omit<Person, "id">) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.updatePerson(personId, data);
+        setCommunities((prevCommunities) =>
+          prevCommunities.map((community) => ({
+            ...community,
+            households: (community.households || []).map((household) => ({
+              ...household,
+              people: (household.people || []).map((person) =>
+                person.id.toString() === personId
+                  ? { ...person, ...data }
+                  : person
+              ),
+            })),
+          }))
+        );
+        addLog(`Updated person: ${data.name}`);
+        resolve();
+      } catch (error) {
+        console.error("Error updating person:", error);
+        addLog(`Failed to update person: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  const deletePerson = (personId: string) => {
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        await api.deletePerson(personId);
+        setCommunities((prevCommunities) =>
+          prevCommunities.map((community) => ({
+            ...community,
+            households: (community.households || []).map((household) => ({
+              ...household,
+              people: (household.people || []).filter(
+                (person) => person.id.toString() !== personId
+              ),
+            })),
+          }))
+        );
+        addLog(`Deleted person with ID: ${personId}`);
+        resolve();
+      } catch (error) {
+        console.error("Error deleting person:", error);
+        addLog(`Failed to delete person: ${error}`);
+        reject(error);
+      }
+    });
+  };
+
+  return {
+    getPeople,
+    createPerson,
+    updatePerson,
+    deletePerson,
+    addLog,
+  };
+};
+
+export default usePersonActions;
+
+================================================================================
+
+File: hooks\useUiActions.tsx
+--------------------------------------------------------------------------------
+import { useAtom } from "jotai";
+import {
+  isDialogOpenAtom,
+  isDrawerOpenAtom,
+  selectedContentAtom,
+} from "../store/atom";
+import CommunityForm from "../forms/community-form";
+import HouseholdForm from "../forms/house-hold-form";
+import PersonForm from "../forms/person-form";
+import { useCommunityActions } from "./useCommunityActions";
+import { useHouseholdActions } from "./useHouseholdActions";
+import { usePersonActions } from "./usePersonActions";
+
+export const useUiActions = () => {
+  const [selectedContent, setSelectedContent] = useAtom(selectedContentAtom);
+  const [isDialogOpen, setIsDialogOpen] = useAtom(isDialogOpenAtom);
+  const [isDrawerOpen, setIsDrawerOpen] = useAtom(isDrawerOpenAtom);
+
+  const { createCommunity, addLog } = useCommunityActions();
+  const { createHousehold } = useHouseholdActions();
+  const { createPerson } = usePersonActions();
+
+  const handleCreateCommunity = () => {
+    setSelectedContent({
+      title: "Create Community",
+      component: (
+        <CommunityForm
+          onSubmit={async (data) => {
+            try {
+              const newCommunity = await createCommunity({
+                name: data.name,
+                phoneNumber: data.phoneNumber,
+              });
+              setSelectedContent(null);
+              setIsDialogOpen(false);
+              setIsDrawerOpen(false);
+              addLog(`Created new community: ${newCommunity.name}`);
+            } catch (error) {
+              console.error("Error creating community:", error);
+              addLog(`Failed to create community: ${error}`);
+            }
+          }}
+        />
+      ),
+    });
+    setIsDrawerOpen(true);
+  };
+
+  const handleCreateHousehold = (communityId: string | number) => {
+    setSelectedContent({
+      title: "Create Household",
+      component: (
+        <HouseholdForm
+          onSubmit={async (data) => {
+            try {
+              const newHousehold = await createHousehold(
+                communityId.toString(),
+                {
+                  address: data.address,
+                  alarmDevice: {
+                    id: data.alarmDeviceId,
+                    status: data.alarmStatus || "inactive",
+                  },
+                }
+              );
+              setSelectedContent(null);
+              setIsDialogOpen(false);
+              setIsDrawerOpen(false);
+              addLog(`Created new household: ${newHousehold.address}`);
+            } catch (error) {
+              console.error("Error creating household:", error);
+              addLog(`Failed to create household: ${error}`);
+            }
+          }}
+        />
+      ),
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleCreatePerson = (householdId: string) => {
+    setSelectedContent({
+      title: "Add Person",
+      component: (
+        <PersonForm
+          onSubmit={async (data) => {
+            try {
+              const newPerson = await createPerson(householdId, {
+                name: data.name,
+                phone: data.phone,
+              });
+              setSelectedContent(null);
+              setIsDialogOpen(false);
+              setIsDrawerOpen(false);
+              addLog(`Added new person: ${newPerson.name}`);
+            } catch (error) {
+              console.error("Error creating person:", error);
+              addLog(`Failed to add person: ${error}`);
+            }
+          }}
+        />
+      ),
+    });
+    setIsDialogOpen(true);
+  };
+
+  return {
+    handleCreateCommunity,
+    handleCreateHousehold,
+    handleCreatePerson,
+  };
+};
+
+export default useUiActions;
+
+================================================================================
+
+File: store\atom.ts
+--------------------------------------------------------------------------------
+// atoms.ts
+import { atom } from "jotai";
+import { Community, Household, Log, Person } from "../types";
+import { TreeNodeInfo } from "@blueprintjs/core";
+
+// Atoms for state management
+export const communitiesAtom = atom<Community[]>([]);
+export const selectedCommunityAtom = atom<Community | null>(null);
+export const isCommunityDrawerOpenAtom = atom(false);
+export const isLogsDrawerOpenAtom = atom(false);
+export const overlayContentAtom = atom<React.ReactNode | null>(null);
+export const selectedHouseholdAtom = atom<Household | null>(null);
+export const selectedPersonAtom = atom<Person | null>(null);
+export const selectedContentAtom = atom<{
+  title: string;
+  component: React.ReactNode;
+} | null>(null);
+export const logsAtom = atom<Log[]>([]);
+export const isCreateCommunityDrawerOpenAtom = atom(false);
+export const newCommunityNameAtom = atom("");
+export const newCommunityPhoneAtom = atom("");
+export const isCreateDrawerOpenAtom = atom(false);
+export const isDialogOpenAtom = atom(false);
+export const isDrawerOpenAtom = atom(false);
+export const treeNodesAtom = atom<TreeNodeInfo[]>([]);
+export const darkModeAtom = atom(false);
+
+export const alarmAlertOpenAtom = atom(false);
+export const deleteAlertOpenAtom = atom(false);
+export const alertTargetAtom = atom<Household | Community | null>(null);
+
+================================================================================
+

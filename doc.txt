@@ -1,0 +1,737 @@
+Directory Structure:
+================================================================================
+attendance_system/
+    .env
+    api.py
+    config.py
+    database.py
+    face_recognition.py
+    main.py
+    requirements.txt
+    tempCodeRunnerFile.py
+    models/
+        facenet_model/
+            20180402-114759.pb
+    __pycache__/
+        config.cpython-312.pyc
+        database.cpython-312.pyc
+        face_recognition.cpython-312.pyc
+================================================================================
+
+File: .env
+--------------------------------------------------------------------------------
+SECRET_KEY=your_secret_key
+MYSQL_HOST=localhost
+MYSQL_USER=laravel_user
+MYSQL_PASSWORD=laravel_user
+MYSQL_DB=bas
+# C:\Users\timothy\Documents\GitHub\Biometric-Facial-Recognition-Attendance-System\attendance_system\models\facenet_model\20180402-114759.pb
+FACENET_MODEL_PATH=C:\Users\timothy\Documents\GitHub\Biometric-Facial-Recognition-Attendance-System\attendance_system\models\facenet_model\20180402-114759.pb
+================================================================================
+
+File: api.py
+--------------------------------------------------------------------------------
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from database import Database
+from face_recognition import FaceRecognition
+import cv2
+import numpy as np
+import logging
+import os
+from werkzeug.utils import secure_filename
+
+app = Flask(__name__)
+CORS(app)
+db = Database()
+face_recognition = FaceRecognition.get_instance()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/register', methods=['POST'])
+def register_student():
+    try:
+        name = request.form['name']
+        student_id = request.form['student_id']
+        
+        if 'files' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        
+        files = request.files.getlist('files')
+        
+        if not files:
+            return jsonify({"error": "No selected file"}), 400
+        
+        embeddings = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                
+                image = cv2.imread(filepath)
+                faces = face_recognition.detect_faces(image)
+                
+                if len(faces) != 1:
+                    os.remove(filepath)
+                    return jsonify({"error": "Image must contain exactly one face"}), 400
+                
+                (x, y, w, h) = faces[0]
+                face_image = image[y:y+h, x:x+w]
+                
+                if not face_recognition.is_valid_face(face_image):
+                    os.remove(filepath)
+                    return jsonify({"error": "Invalid face detected"}), 400
+                
+                face_embedding = face_recognition.get_face_embedding(face_image)
+                
+                if face_embedding is not None:
+                    embeddings.append(face_embedding)
+                
+                os.remove(filepath)
+        
+        if not embeddings:
+            return jsonify({"error": "No valid face found in the images"}), 400
+        
+        # Average the embeddings
+        average_embedding = np.mean(embeddings, axis=0)
+        
+        query = "INSERT INTO students (student_id, name, face_embedding) VALUES (%s, %s, %s)"
+        params = (student_id, name, average_embedding.tobytes())
+        db.execute_query(query, params)
+
+        return jsonify({"message": "Student registered successfully"}), 201
+    except Exception as e:
+        logger.error(f"Error registering student: {e}")
+        return jsonify({"error": "Failed to register student"}), 500
+        
+@app.route('/api/recognize', methods=['POST'])
+def recognize_student():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            image = cv2.imread(filepath)
+            face_embedding = face_recognition.get_face_embedding(image)
+            
+            os.remove(filepath)  # Remove the file after processing
+            
+            if face_embedding is None:
+                return jsonify({"error": "No face found in the image"}), 400
+            
+            # Fetch all students from the database
+            query = "SELECT student_id, name, face_embedding FROM students"
+            results = db.fetch_all(query)
+            
+            if results is None:
+                return jsonify({"error": "Failed to fetch students from database"}), 500
+            
+            for student_id, name, stored_embedding_bytes in results:
+                stored_embedding = np.frombuffer(stored_embedding_bytes, dtype=np.float32)
+                if face_recognition.compare_faces(face_embedding, stored_embedding):
+                    # Record attendance
+                    attendance_query = "INSERT INTO attendance (student_id, timestamp) VALUES (%s, NOW())"
+                    db.execute_query(attendance_query, (student_id,))
+                    return jsonify({"student_id": student_id, "name": name}), 200
+            
+            return jsonify({"message": "No matching student found"}), 404
+    except Exception as e:
+        logger.error(f"Error recognizing student: {e}")
+        return jsonify({"error": "Failed to recognize student"}), 500
+
+
+@app.route('/api/attendance', methods=['GET'])
+def get_attendance():
+    try:
+        query = """
+        SELECT a.id, a.student_id, s.name, a.timestamp 
+        FROM attendance a 
+        JOIN students s ON a.student_id = s.student_id 
+        ORDER BY a.timestamp DESC
+        """
+        results = db.fetch_all(query)
+        
+        if results is None:
+            return jsonify({"error": "Failed to fetch attendance records"}), 500
+        
+        attendance_records = [
+            {
+                "id": record[0],
+                "student_id": record[1],
+                "name": record[2],
+                "timestamp": record[3].isoformat()
+            }
+            for record in results
+        ]
+        
+        return jsonify(attendance_records), 200
+    except Exception as e:
+        logger.error(f"Error fetching attendance: {e}")
+        return jsonify({"error": "Failed to fetch attendance records"}), 500
+
+
+@app.route('/api/students', methods=['GET'])
+def get_students():
+    try:
+        query = "SELECT student_id, name FROM students"
+        results = db.fetch_all(query)
+        
+        if results is None:
+            return jsonify({"error": "Failed to fetch students"}), 500
+        
+        students = [
+            {
+                "student_id": record[0],
+                "name": record[1]
+            }
+            for record in results
+        ]
+        
+        return jsonify(students), 200
+    except Exception as e:
+        logger.error(f"Error fetching students: {e}")
+        return jsonify({"error": "Failed to fetch students"}), 500
+
+
+if __name__ == '__main__':
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+    app.run(debug=True, use_reloader=False)  
+================================================================================
+
+File: config.py
+--------------------------------------------------------------------------------
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Config:
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    MYSQL_HOST = os.getenv('MYSQL_HOST')
+    MYSQL_USER = os.getenv('MYSQL_USER')
+    MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
+    MYSQL_DB = os.getenv('MYSQL_DB')
+    FACENET_MODEL_PATH = os.getenv('FACENET_MODEL_PATH')
+================================================================================
+
+File: database.py
+--------------------------------------------------------------------------------
+import mysql.connector
+from mysql.connector import Error
+import logging
+from config import Config
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class Database:
+    def __init__(self):
+        self.connection = None
+        self.connect()
+
+    def connect(self):
+        try:
+            self.connection = mysql.connector.connect(
+                host=Config.MYSQL_HOST,
+                user=Config.MYSQL_USER,
+                password=Config.MYSQL_PASSWORD,
+                database=Config.MYSQL_DB
+            )
+            if self.connection.is_connected():
+                logger.info("Connected to MySQL database")
+        except Error as e:
+            logger.error(f"Error while connecting to MySQL: {e}")
+
+    def ensure_connection(self):
+        try:
+            if self.connection is None or not self.connection.is_connected():
+                self.connect()
+        except Error as e:
+            logger.error(f"Error while reconnecting to MySQL: {e}")
+
+    def execute_query(self, query, params=None):
+        try:
+            self.ensure_connection()
+            with self.connection.cursor() as cursor:
+                if params:
+                    cursor.execute(query, params)
+                else:
+                    cursor.execute(query)
+                self.connection.commit()
+            return cursor
+        except Error as e:
+            logger.error(f"Error executing query: {e}")
+            return None
+
+    def fetch_all(self, query, params=None):
+        try:
+            self.ensure_connection()
+            with self.connection.cursor() as cursor:
+                if params:
+                    cursor.execute(query, params)
+                else:
+                    cursor.execute(query)
+                return cursor.fetchall()
+        except Error as e:
+            logger.error(f"Error fetching data: {e}")
+            return None
+
+    def fetch_one(self, query, params=None):
+        try:
+            self.ensure_connection()
+            with self.connection.cursor() as cursor:
+                if params:
+                    cursor.execute(query, params)
+                else:
+                    cursor.execute(query)
+                return cursor.fetchone()
+        except Error as e:
+            logger.error(f"Error fetching data: {e}")
+            return None
+
+    def close(self):
+        if self.connection and self.connection.is_connected():
+            self.connection.close()
+            logger.info("MySQL connection closed")
+================================================================================
+
+File: face_recognition.py
+--------------------------------------------------------------------------------
+import tensorflow as tf
+import cv2
+import numpy as np
+from scipy.spatial.distance import cosine
+import logging
+from config import Config
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class FaceRecognition:
+    _instance = None
+
+    @staticmethod
+    def get_instance():
+        if FaceRecognition._instance is None:
+            FaceRecognition._instance = FaceRecognition()
+        return FaceRecognition._instance
+
+    def __init__(self):
+        if FaceRecognition._instance is not None:
+            raise Exception("This class is a singleton. Use get_instance() to get the object.")
+        else:
+            FaceRecognition._instance = self
+            self.graph = None
+            self.sess = None
+            self.images_placeholder = None
+            self.embeddings = None
+            self.phase_train_placeholder = None
+            self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            self.load_facenet_model()
+
+    def load_facenet_model(self):
+        try:
+            # Create a new graph and set it as the default
+            self.graph = tf.Graph()
+            with self.graph.as_default():
+                # Load the graph def from the file
+                with tf.io.gfile.GFile(Config.FACENET_MODEL_PATH, "rb") as f:
+                    graph_def = tf.compat.v1.GraphDef()
+                    graph_def.ParseFromString(f.read())
+                
+                # Import the graph def into the current graph
+                tf.import_graph_def(graph_def, name='')
+            
+            # Create a session for the loaded graph
+            self.sess = tf.compat.v1.Session(graph=self.graph)
+            
+            # Get input and output tensors
+            self.images_placeholder = self.graph.get_tensor_by_name("input:0")
+            self.embeddings = self.graph.get_tensor_by_name("embeddings:0")
+            self.phase_train_placeholder = self.graph.get_tensor_by_name("phase_train:0")
+
+            logger.info("FaceNet model loaded successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error loading FaceNet model: {e}")
+            return None
+
+    def preprocess_face(self, face_image):
+        face_image = cv2.resize(face_image, (160, 160))
+        face_image = face_image.astype(np.float32) / 255.0  # Normalize to [0,1]
+        return face_image
+
+    def get_face_embedding(self, face_image):
+        try:
+            if self.sess is None:
+                logger.error("TensorFlow session is not initialized")
+                return None
+
+            preprocessed_image = self.preprocess_face(face_image)
+            feed_dict = {
+                self.images_placeholder: [preprocessed_image],
+                self.phase_train_placeholder: False
+            }
+            face_embedding = self.sess.run(self.embeddings, feed_dict=feed_dict)[0]
+            return face_embedding
+        except Exception as e:
+            logger.error(f"Error getting face embedding: {e}")
+            return None
+
+    def compare_faces(self, face_embedding1, face_embedding2, threshold=0.7):
+        distance = cosine(face_embedding1, face_embedding2)
+        return distance < threshold
+
+    def detect_faces(self, frame):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        return faces
+
+    def is_valid_face(self, face_image):
+        # Add more sophisticated checks here if needed
+        return face_image.shape[0] > 50 and face_image.shape[1] > 50
+================================================================================
+
+File: main.py
+--------------------------------------------------------------------------------
+import cv2
+import numpy as np
+import time
+import logging
+from database import Database
+from face_recognition import FaceRecognition
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class AttendanceSystem:
+    def __init__(self):
+        self.db = Database()
+        self.face_recognition = FaceRecognition.get_instance()
+        self.known_faces = self.load_known_faces()
+        self.threshold = 0.6  # You can adjust this threshold
+
+    def load_known_faces(self):
+        query = "SELECT student_id, face_embedding FROM students"
+        results = self.db.fetch_all(query)
+        known_faces = {}
+        for student_id, face_embedding_bytes in results:
+            face_embedding = np.frombuffer(face_embedding_bytes, dtype=np.float32)
+            known_faces[student_id] = face_embedding
+        return known_faces
+
+    def record_attendance(self, student_id):
+        query = "INSERT INTO attendance (student_id, timestamp) VALUES (%s, NOW())"
+        params = (student_id,)
+        self.db.execute_query(query, params)
+        logger.info(f"Attendance recorded for student {student_id}")
+
+    def recognize_face(self, face_embedding):
+        min_distance = float("inf")
+        recognized_student_id = None
+        for student_id, known_embedding in self.known_faces.items():
+            distance = np.linalg.norm(face_embedding - known_embedding)
+            if distance < min_distance:
+                min_distance = distance
+                recognized_student_id = student_id
+
+        if min_distance < self.threshold:
+            return recognized_student_id
+        return None
+
+    def run(self):
+        cap = cv2.VideoCapture(0)
+        last_attendance_time = {}
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                logger.error("Failed to capture frame")
+                break
+
+            faces = self.face_recognition.detect_faces(frame)
+            for (x, y, w, h) in faces:
+                face_image = frame[y:y+h, x:x+w]
+                face_embedding = self.face_recognition.get_face_embedding(face_image)
+                
+                if face_embedding is not None:
+                    student_id = self.recognize_face(face_embedding)
+                    if student_id:
+                        current_time = time.time()
+                        if student_id not in last_attendance_time or (current_time - last_attendance_time[student_id]) > 60:
+                            self.record_attendance(student_id)
+                            last_attendance_time[student_id] = current_time
+                        cv2.putText(frame, f"Student ID: {student_id}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                    else:
+                        cv2.putText(frame, "Unknown", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,0,255), 2)
+
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+            cv2.imshow('Attendance System', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+        self.db.close()
+
+if __name__ == "__main__":
+    try:
+        attendance_system = AttendanceSystem()
+        attendance_system.run()
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
+
+
+================================================================================
+
+File: requirements.txt
+--------------------------------------------------------------------------------
+tensorflow==2.6.0
+numpy==1.19.5
+scipy==1.7.1
+opencv-python==4.5.3.56
+Flask==2.0.1
+mysql-connector-python==8.0.26
+python-dotenv==0.19.0
+================================================================================
+
+File: tempCodeRunnerFile.py
+--------------------------------------------------------------------------------
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from database import Database
+from face_recognition import FaceRecognition
+import cv2
+import numpy as np
+import logging
+import os
+from werkzeug.utils import secure_filename
+
+app = Flask(__name__)
+CORS(app)
+db = Database()
+face_recognition = FaceRecognition.get_instance()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/register', methods=['POST'])
+def register_student():
+    try:
+        name = request.form['name']
+        student_id = request.form['student_id']
+        
+        if 'files' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        
+        files = request.files.getlist('files')
+        
+        if not files:
+            return jsonify({"error": "No selected file"}), 400
+        
+        embeddings = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                
+                image = cv2.imread(filepath)
+                faces = face_recognition.detect_faces(image)
+                
+                if len(faces) != 1:
+                    os.remove(filepath)
+                    return jsonify({"error": "Image must contain exactly one face"}), 400
+                
+                (x, y, w, h) = faces[0]
+                face_image = image[y:y+h, x:x+w]
+                
+                if not face_recognition.is_valid_face(face_image):
+                    os.remove(filepath)
+                    return jsonify({"error": "Invalid face detected"}), 400
+                
+                face_embedding = face_recognition.get_face_embedding(face_image)
+                
+                if face_embedding is not None:
+                    embeddings.append(face_embedding)
+                
+                os.remove(filepath)
+        
+        if not embeddings:
+            return jsonify({"error": "No valid face found in the images"}), 400
+        
+        # Average the embeddings
+        average_embedding = np.mean(embeddings, axis=0)
+        
+        query = "INSERT INTO students (student_id, name, face_embedding) VALUES (%s, %s, %s)"
+        params = (student_id, name, average_embedding.tobytes())
+        db.execute_query(query, params)
+
+        return jsonify({"message": "Student registered successfully"}), 201
+    except Exception as e:
+        logger.error(f"Error registering student: {e}")
+        return jsonify({"error": "Failed to register student"}), 500
+        
+@app.route('/api/recognize', methods=['POST'])
+def recognize_student():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            image = cv2.imread(filepath)
+            face_embedding = face_recognition.get_face_embedding(image)
+            
+            os.remove(filepath)  # Remove the file after processing
+            
+            if face_embedding is None:
+                return jsonify({"error": "No face found in the image"}), 400
+            
+            # Fetch all students from the database
+            query = "SELECT student_id, name, face_embedding FROM students"
+            results = db.fetch_all(query)
+            
+            if results is None:
+                return jsonify({"error": "Failed to fetch students from database"}), 500
+            
+            for student_id, name, stored_embedding_bytes in results:
+                stored_embedding = np.frombuffer(stored_embedding_bytes, dtype=np.float32)
+                if face_recognition.compare_faces(face_embedding, stored_embedding):
+                    # Record attendance
+                    attendance_query = "INSERT INTO attendance (student_id, timestamp) VALUES (%s, NOW())"
+                    db.execute_query(attendance_query, (student_id,))
+                    return jsonify({"student_id": student_id, "name": name}), 200
+            
+            return jsonify({"message": "No matching student found"}), 404
+    except Exception as e:
+        logger.error(f"Error recognizing student: {e}")
+        return jsonify({"error": "Failed to recognize student"}), 500
+
+
+@app.route('/api/attendance', methods=['GET'])
+def get_attendance():
+    try:
+        query = """
+        SELECT a.id, a.student_id, s.name, a.timestamp 
+        FROM attendance a 
+        JOIN students s ON a.student_id = s.student_id 
+        ORDER BY a.timestamp DESC
+        """
+        results = db.fetch_all(query)
+        
+        if results is None:
+            return jsonify({"error": "Failed to fetch attendance records"}), 500
+        
+        attendance_records = [
+            {
+                "id": record[0],
+                "student_id": record[1],
+                "name": record[2],
+                "timestamp": record[3].isoformat()
+            }
+            for record in results
+        ]
+        
+        return jsonify(attendance_records), 200
+    except Exception as e:
+        logger.error(f"Error fetching attendance: {e}")
+        return jsonify({"error": "Failed to fetch attendance records"}), 500
+
+
+@app.route('/api/students', methods=['GET'])
+def get_students():
+    try:
+        query = "SELECT student_id, name FROM students"
+        results = db.fetch_all(query)
+        
+        if results is None:
+            return jsonify({"error": "Failed to fetch students"}), 500
+        
+        students = [
+            {
+                "student_id": record[0],
+                "name": record[1]
+            }
+            for record in results
+        ]
+        
+        return jsonify(students), 200
+    except Exception as e:
+        logger.error(f"Error fetching students: {e}")
+        return jsonify({"error": "Failed to fetch students"}), 500
+
+
+if __name__ == '__main__':
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+    app.run(debug=True, use_reloader=False)  
+================================================================================
+
+File: models\facenet_model\20180402-114759.pb
+--------------------------------------------------------------------------------
+Error reading file: 'utf-8' codec can't decode byte 0x94 in position 112: invalid start byte
+
+================================================================================
+
+File: __pycache__\config.cpython-312.pyc
+--------------------------------------------------------------------------------
+Error reading file: 'utf-8' codec can't decode byte 0xcb in position 0: invalid continuation byte
+
+================================================================================
+
+File: __pycache__\database.cpython-312.pyc
+--------------------------------------------------------------------------------
+Error reading file: 'utf-8' codec can't decode byte 0xcb in position 0: invalid continuation byte
+
+================================================================================
+
+File: __pycache__\face_recognition.cpython-312.pyc
+--------------------------------------------------------------------------------
+Error reading file: 'utf-8' codec can't decode byte 0xcb in position 0: invalid continuation byte
+
+================================================================================
+

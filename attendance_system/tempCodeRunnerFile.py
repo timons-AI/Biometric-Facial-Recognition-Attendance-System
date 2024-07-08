@@ -1,0 +1,1 @@
+/api/admin/register_lecturer
