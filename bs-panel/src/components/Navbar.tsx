@@ -1,11 +1,10 @@
-import React from "react";
+import React, { memo } from "react";
 import { useAtom } from "jotai";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Navbar,
   Button,
   Alignment,
-  Tag,
   Menu,
   MenuItem,
   Popover,
@@ -14,7 +13,7 @@ import {
 import { userAtom } from "../store/auth";
 import { logout } from "../services/auth";
 
-const AppNavbar: React.FC = () => {
+const AppNavbar: React.FC = memo(() => {
   const [user, setUser] = useAtom(userAtom);
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,7 +25,6 @@ const AppNavbar: React.FC = () => {
   };
 
   const isActive = (path: string) => location.pathname === path;
-  console.log(location.pathname);
 
   const renderLoginMenu = () => (
     <Popover
@@ -86,11 +84,18 @@ const AppNavbar: React.FC = () => {
             />
           )}
           {user?.role === "student" && (
-            <MenuItem
-              icon="history"
-              text="Attendance History"
-              onClick={() => navigate("/student/attendance-history")}
-            />
+            <>
+              <MenuItem
+                icon="play"
+                text="Session"
+                onClick={() => navigate("/student/start-session")}
+              />
+              <MenuItem
+                icon="history"
+                text="Attendance History"
+                onClick={() => navigate("/student/attendance-history")}
+              />
+            </>
           )}
           <MenuItem icon="log-out" text="Logout" onClick={handleLogout} />
         </Menu>
@@ -125,7 +130,13 @@ const AppNavbar: React.FC = () => {
       }
       position={Position.BOTTOM_RIGHT}
     >
-      <Button icon="more" minimal intent="warning" rightIcon="caret-down" />
+      <Button
+        icon="more"
+        // outlined
+        minimal
+        intent="warning"
+        rightIcon="caret-down"
+      />
     </Popover>
   );
 
@@ -135,7 +146,6 @@ const AppNavbar: React.FC = () => {
         <Navbar.Heading>Attendance System</Navbar.Heading>
         <Navbar.Divider />
         <Button
-          // className={isActive("/") ? " bg-red-400" : ""}
           icon="home"
           text="Home"
           intent={isActive("/") ? "primary" : "none"}
@@ -144,7 +154,6 @@ const AppNavbar: React.FC = () => {
         />
         {user && (
           <Button
-            // className={isActive(`/${user.role}/dashboard`) ? "bp4-active" : ""}
             intent={isActive(`/${user.role}/dashboard`) ? "primary" : "none"}
             icon="dashboard"
             text="Dashboard"
@@ -161,6 +170,6 @@ const AppNavbar: React.FC = () => {
       </Navbar.Group>
     </Navbar>
   );
-};
+});
 
 export default AppNavbar;

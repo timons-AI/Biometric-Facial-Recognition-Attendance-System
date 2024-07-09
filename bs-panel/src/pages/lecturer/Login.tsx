@@ -54,7 +54,8 @@ const LecturerLogin: React.FC = () => {
   };
 
   return (
-    <Card elevation={2}>
+    <Card>
+      {/* <img src="https://via.placeholder.com/150" alt="Lecturer" /> */}
       <H2>Lecturer Login</H2>
       {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
       <form onSubmit={handleLogin}>
@@ -74,7 +75,7 @@ const LecturerLogin: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
         </FormGroup>
-        <Button type="submit" intent={Intent.PRIMARY} loading={isLoading}>
+        <Button type="submit" fill intent={Intent.PRIMARY} loading={isLoading}>
           Log In
         </Button>
       </form>

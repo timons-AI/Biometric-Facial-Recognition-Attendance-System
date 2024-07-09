@@ -1,0 +1,2155 @@
+Directory Structure:
+================================================================================
+/
+    App.tsx
+    index.css
+    main.tsx
+    vite-env.d.ts
+components/
+    FaceCapture.tsx
+    Navbar.tsx
+hooks/
+pages/
+    HomePage.tsx
+    admin/
+        Dashboard.tsx
+        Login.tsx
+        Register.tsx
+        RegisterStudent.tsx
+        RegisterTeacher.tsx
+    lecturer/
+        Dashboard.tsx
+        Login.tsx
+    student/
+        Dashboard.tsx
+        Login.tsx
+services/
+    api.ts
+    auth.ts
+store/
+    auth.ts
+types/
+utils/
+    sessionManager.ts
+================================================================================
+
+File: App.tsx
+--------------------------------------------------------------------------------
+import React, { useEffect, useRef } from "react";
+import {
+  // BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
+import { useAtom } from "jotai";
+import { userAtom } from "./store/auth";
+import AppNavbar from "./components/Navbar";
+import StudentLogin from "./pages/student/Login";
+import LecturerLogin from "./pages/lecturer/Login";
+import AdminLogin from "./pages/admin/Login";
+import HomePage from "./pages/HomePage";
+import AdminRegister from "./pages/admin/Register";
+import StudentDashboard from "./pages/student/Dashboard";
+import LecturerDashboard from "./pages/lecturer/Dashboard";
+import AdminDashboard from "./pages/admin/Dashboard";
+import RegisterStudentPage from "./pages/admin/RegisterStudent";
+import RegisterLecturerPage from "./pages/admin/RegisterTeacher";
+import { checkSessionExpiration, useLogout } from "./utils/sessionManager";
+
+const App: React.FC = () => {
+  const [user, setUser] = useAtom(userAtom);
+  const navigate = useNavigate();
+  const logout = useLogout();
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser({
+          id: parsedUser.id,
+          role: parsedUser.role,
+          name: parsedUser.name,
+          token: token,
+        });
+
+        // Check session expiration
+        if (checkSessionExpiration()) {
+          logout();
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
+    }
+
+    // Set up interval to check session expiration
+    intervalRef.current = window.setInterval(() => {
+      if (checkSessionExpiration()) {
+        logout();
+        navigate("/");
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [setUser, logout, navigate]);
+
+  const PrivateRoute: React.FC<{
+    element: React.ReactElement;
+    allowedRoles: string[];
+  }> = ({ element, allowedRoles }) => {
+    if (!user) {
+      return <Navigate to="/" />;
+    }
+    if (!allowedRoles.includes(user.role)) {
+      return <Navigate to="/" />;
+    }
+    return element;
+  };
+
+  return (
+    // <Router>
+    <>
+      <AppNavbar />
+      <div className="container p-2 mt-4">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/student/login" element={<StudentLogin />} />
+          <Route path="/lecturer/login" element={<LecturerLogin />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/student/dashboard"
+            element={
+              <PrivateRoute
+                element={<StudentDashboard />}
+                allowedRoles={["student"]}
+              />
+            }
+          />
+          <Route
+            path="/lecturer/dashboard"
+            element={
+              <PrivateRoute
+                element={<LecturerDashboard />}
+                allowedRoles={["lecturer"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/register"
+            element={
+              <PrivateRoute
+                element={<AdminRegister />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <PrivateRoute
+                element={<AdminDashboard />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/register-student"
+            element={
+              <PrivateRoute
+                element={<RegisterStudentPage />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/register-lecturer"
+            element={
+              <PrivateRoute
+                element={<RegisterLecturerPage />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </>
+    // </Router>
+  );
+};
+
+export default App;
+
+================================================================================
+
+File: index.css
+--------------------------------------------------------------------------------
+@import "normalize.css";
+@import "@blueprintjs/core/lib/css/blueprint.css";
+@import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+@import "@blueprintjs/table/lib/css/table.css";
+@import "@blueprintjs/select/lib/css/blueprint-select.css";
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+
+body {
+  margin: 0;
+  
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Roboto', sans-serif;
+
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  
+
+}
+================================================================================
+
+File: main.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+import { BrowserRouter } from "react-router-dom";
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  // <React.StrictMode>
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+  // {/* </React.StrictMode> */}
+);
+
+================================================================================
+
+File: vite-env.d.ts
+--------------------------------------------------------------------------------
+/// <reference types="vite/client" />
+
+================================================================================
+
+File: components\FaceCapture.tsx
+--------------------------------------------------------------------------------
+// components/FaceCapture.tsx
+import React, { useRef, useState, useEffect } from "react";
+import { Button, Card, H5, Intent } from "@blueprintjs/core";
+
+interface FaceCaptureProps {
+  onCapture: (images: File[]) => void;
+  singleCapture?: boolean;
+}
+
+const FaceCapture: React.FC<FaceCaptureProps> = ({
+  onCapture,
+  singleCapture = false,
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedImages, setCapturedImages] = useState<File[]>([]);
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true });
+      setStream(s);
+      if (videoRef.current) {
+        videoRef.current.srcObject = s;
+      }
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+    }
+  };
+
+  const captureImage = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `captured-image-${Date.now()}.jpg`, {
+            type: "image/jpeg",
+          });
+          const newImages = [...capturedImages, file];
+          setCapturedImages(newImages);
+          onCapture(newImages);
+          console.log(`Captured image: ${file.name}, size: ${file.size} bytes`);
+          if (singleCapture) {
+            stopCamera();
+          }
+        }
+      }, "image/jpeg");
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = capturedImages.filter((_, i) => i !== index);
+    setCapturedImages(newImages);
+    onCapture(newImages);
+  };
+
+  return (
+    <div>
+      <video
+        ref={videoRef}
+        autoPlay
+        style={{ width: "100%", maxWidth: "500px" }}
+      />
+      <div className=" p-2 gap-1 flex">
+        <Button
+          onClick={startCamera}
+          disabled={!!stream}
+          intent={Intent.PRIMARY}
+        >
+          Start Camera
+        </Button>
+        <Button
+          onClick={captureImage}
+          disabled={!stream}
+          intent={Intent.SUCCESS}
+        >
+          Capture
+        </Button>
+        <Button onClick={stopCamera} disabled={!stream} intent={Intent.DANGER}>
+          Stop Camera
+        </Button>
+      </div>
+      <div style={{ marginTop: "20px" }}>
+        <H5>Captured Images:</H5>
+        <div style={{ display: "flex", flexWrap: "wrap" }}>
+          {capturedImages.map((image, index) => (
+            <Card key={index} style={{ margin: "10px", width: "150px" }}>
+              <img
+                src={URL.createObjectURL(image)}
+                alt={`Captured ${index}`}
+                style={{ width: "100%" }}
+              />
+              <Button
+                onClick={() => removeImage(index)}
+                intent={Intent.DANGER}
+                small
+              >
+                Remove
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FaceCapture;
+
+================================================================================
+
+File: components\Navbar.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { useAtom } from "jotai";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Navbar,
+  Button,
+  Alignment,
+  Tag,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from "@blueprintjs/core";
+import { userAtom } from "../store/auth";
+import { logout } from "../services/auth";
+
+const AppNavbar: React.FC = () => {
+  const [user, setUser] = useAtom(userAtom);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLogout = () => {
+    logout();
+    setUser(null);
+    navigate("/");
+  };
+
+  const isActive = (path: string) => location.pathname === path;
+  console.log(location.pathname);
+
+  const renderLoginMenu = () => (
+    <Popover
+      content={
+        <Menu>
+          <MenuItem
+            icon="user"
+            text="Student Login"
+            onClick={() => navigate("/student/login")}
+          />
+          <MenuItem
+            icon="user"
+            text="Lecturer Login"
+            onClick={() => navigate("/lecturer/login")}
+          />
+          <MenuItem
+            icon="key"
+            text="Admin Login"
+            onClick={() => navigate("/admin/login")}
+          />
+        </Menu>
+      }
+      position={Position.BOTTOM_RIGHT}
+    >
+      <Button icon="log-in" text="Login" rightIcon="caret-down" />
+    </Popover>
+  );
+
+  const renderUserMenu = () => (
+    <Popover
+      content={
+        <Menu>
+          <MenuItem
+            icon="dashboard"
+            text="Dashboard"
+            onClick={() => navigate(`/${user?.role}/dashboard`)}
+          />
+          {user?.role === "admin" && (
+            <>
+              <MenuItem
+                icon="new-person"
+                text="Register Admin"
+                onClick={() => navigate("/admin/register")}
+              />
+              <MenuItem
+                icon="new-object"
+                text="Add Course"
+                onClick={() => navigate("/admin/add-course")}
+              />
+            </>
+          )}
+          {user?.role === "lecturer" && (
+            <MenuItem
+              icon="timeline-events"
+              text="Manage Sessions"
+              onClick={() => navigate("/lecturer/manage-sessions")}
+            />
+          )}
+          {user?.role === "student" && (
+            <MenuItem
+              icon="history"
+              text="Attendance History"
+              onClick={() => navigate("/student/attendance-history")}
+            />
+          )}
+          <MenuItem icon="log-out" text="Logout" onClick={handleLogout} />
+        </Menu>
+      }
+      position={Position.BOTTOM_RIGHT}
+    >
+      <Button
+        icon="user"
+        minimal
+        intent="none"
+        text={user?.name}
+        rightIcon="caret-down"
+      />
+    </Popover>
+  );
+
+  const renderActionsMenu = () => (
+    <Popover
+      content={
+        <Menu>
+          <MenuItem
+            icon="new-person"
+            text="Register Student"
+            onClick={() => navigate("/admin/register-student")}
+          />
+          <MenuItem
+            icon="new-person"
+            text="Register Lecturer"
+            onClick={() => navigate("/admin/register-lecturer")}
+          />
+        </Menu>
+      }
+      position={Position.BOTTOM_RIGHT}
+    >
+      <Button icon="more" minimal intent="warning" rightIcon="caret-down" />
+    </Popover>
+  );
+
+  return (
+    <Navbar>
+      <Navbar.Group align={Alignment.LEFT}>
+        <Navbar.Heading>Attendance System</Navbar.Heading>
+        <Navbar.Divider />
+        <Button
+          // className={isActive("/") ? " bg-red-400" : ""}
+          icon="home"
+          text="Home"
+          intent={isActive("/") ? "primary" : "none"}
+          minimal
+          onClick={() => navigate("/")}
+        />
+        {user && (
+          <Button
+            // className={isActive(`/${user.role}/dashboard`) ? "bp4-active" : ""}
+            intent={isActive(`/${user.role}/dashboard`) ? "primary" : "none"}
+            icon="dashboard"
+            text="Dashboard"
+            minimal
+            onClick={() => navigate(`/${user.role}/dashboard`)}
+          />
+        )}
+      </Navbar.Group>
+      <Navbar.Group align={Alignment.RIGHT}>
+        {user ? renderUserMenu() : renderLoginMenu()}
+      </Navbar.Group>
+      <Navbar.Group align={Alignment.RIGHT}>
+        {user && user.role === "admin" && renderActionsMenu()}
+      </Navbar.Group>
+    </Navbar>
+  );
+};
+
+export default AppNavbar;
+
+================================================================================
+
+File: pages\HomePage.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { H1 } from "@blueprintjs/core";
+const HomePage: React.FC = () => {
+  return (
+    <div className="min-h-screen  flex flex-col items-center justify-center">
+      <main className="flex-grow container mx-auto px-4 py-16 text-center">
+        <H1 className="text-4xl font-bold mb-4">
+          Welcome to the Attendance System
+        </H1>
+        <p className="text-xl mb-8">
+          {" "}
+          This is the University Attendance System. It's a system that allows
+          students to log in and view their attendance records. Lecturers can
+          also log in to mark attendance for their classes. Admins can manage
+          students, lecturers, and courses.
+        </p>
+      </main>
+      <footer className="w-full bg-gray-800 text-white py-4">
+        <div className="container mx-auto px-4 text-center">
+          <p>&copy; 2024 University Attendance System. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default HomePage;
+
+================================================================================
+
+File: pages\admin\Dashboard.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  H2,
+  H3,
+  Button,
+  HTMLTable,
+  Spinner,
+  Intent,
+  Dialog,
+  FormGroup,
+  InputGroup,
+  Section,
+  SectionCard,
+  DialogBody,
+  DialogFooter,
+} from "@blueprintjs/core";
+import { Cell, Column, Table2 } from "@blueprintjs/table";
+import { Bar, Doughnut } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from "chart.js";
+import {
+  fetchAdminDashboardData,
+  registerLecturer,
+  addCourse,
+  addTimetableEntry,
+} from "../../services/api";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface Student {
+  student_id: string;
+  name: string;
+  email: string;
+  total_sessions: number;
+}
+
+interface Lecturer {
+  lecturer_id: string;
+  name: string;
+  email: string;
+  courses_count: number;
+}
+
+interface Course {
+  course_id: string;
+  course_name: string;
+  lecturer_name: string;
+  students_count: number;
+}
+
+interface AttendanceStats {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+  }[];
+}
+
+export interface AdminDashboardData {
+  totalStudents: number;
+  totalLecturers: number;
+  totalCourses: number;
+  recentStudents: Student[];
+  topLecturers: Lecturer[];
+  popularCourses: Course[];
+  attendanceStats: AttendanceStats;
+  courseDistribution: AttendanceStats;
+}
+
+const AdminDashboard: React.FC = () => {
+  const [data, setData] = useState<AdminDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAddLecturerOpen, setIsAddLecturerOpen] = useState(false);
+  const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
+  const [isAddTimetableOpen, setIsAddTimetableOpen] = useState(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const dashboardData = await fetchAdminDashboardData();
+        setData(dashboardData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return <Spinner />;
+  }
+
+  if (!data) {
+    return <div>Failed to load dashboard data.</div>;
+  }
+
+  const handleAddLecturer = async (
+    name: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      await registerLecturer(name, email, password);
+      // Refresh dashboard data
+      const dashboardData = await fetchAdminDashboardData();
+      setData(dashboardData);
+      setIsAddLecturerOpen(false);
+    } catch (error) {
+      console.error("Failed to add lecturer:", error);
+    }
+  };
+
+  const handleAddCourse = async (courseName: string, lecturerId: string) => {
+    try {
+      await addCourse(courseName, lecturerId);
+      // Refresh dashboard data
+      const dashboardData = await fetchAdminDashboardData();
+      setData(dashboardData);
+      setIsAddCourseOpen(false);
+    } catch (error) {
+      console.error("Failed to add course:", error);
+    }
+  };
+
+  const handleAddTimetable = async (
+    courseId: string,
+    day: string,
+    startTime: string,
+    endTime: string
+  ) => {
+    try {
+      await addTimetableEntry(courseId, day, startTime, endTime);
+      // Refresh dashboard data
+      const dashboardData = await fetchAdminDashboardData();
+      setData(dashboardData);
+      setIsAddTimetableOpen(false);
+    } catch (error) {
+      console.error("Failed to add timetable entry:", error);
+    }
+  };
+  console.log("Course Distribution Data:", data.courseDistribution);
+
+  return (
+    <div className="admin-dashboard">
+      <H2>Admin Dashboard</H2>
+
+      <Section title="Dashboard Summary" elevation={1}>
+        <SectionCard>
+          <H3>Total Students</H3>
+          <p>{data.totalStudents}</p>
+        </SectionCard>
+        <SectionCard>
+          <H3>Total Lecturers</H3>
+          <p>{data.totalLecturers}</p>
+        </SectionCard>
+        <SectionCard>
+          <H3>Total Courses</H3>
+          <p>{data.totalCourses}</p>
+        </SectionCard>
+      </Section>
+
+      <Section
+        title="Recent Students"
+        elevation={1}
+        collapsible={true}
+        icon="user"
+      >
+        <Table2 numRows={data.recentStudents.length}>
+          <Column
+            name="Student ID"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.recentStudents[rowIndex].student_id}</Cell>
+            )}
+          />
+          <Column
+            name="Name"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.recentStudents[rowIndex].name}</Cell>
+            )}
+          />
+          <Column
+            name="Email"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.recentStudents[rowIndex].email}</Cell>
+            )}
+          />
+          <Column
+            name="Total Sessions"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.recentStudents[rowIndex].total_sessions}</Cell>
+            )}
+          />
+        </Table2>
+      </Section>
+
+      <Section
+        title="Top Lecturers"
+        elevation={1}
+        collapsible={true}
+        icon="people"
+      >
+        <HTMLTable>
+          <thead>
+            <tr>
+              <th>Lecturer ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Courses Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.topLecturers.map((lecturer) => (
+              <tr key={lecturer.lecturer_id}>
+                <td>{lecturer.lecturer_id}</td>
+                <td>{lecturer.name}</td>
+                <td>{lecturer.email}</td>
+                <td>{lecturer.courses_count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </HTMLTable>
+      </Section>
+
+      <Section
+        title="Popular Courses"
+        elevation={1}
+        collapsible={true}
+        icon="book"
+      >
+        <HTMLTable>
+          <thead>
+            <tr>
+              <th>Course ID</th>
+              <th>Course Name</th>
+              <th>Lecturer</th>
+              <th>Students Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.popularCourses.map((course) => (
+              <tr key={course.course_id}>
+                <td>{course.course_id}</td>
+                <td>{course.course_name}</td>
+                <td>{course.lecturer_name}</td>
+                <td>{course.students_count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </HTMLTable>
+      </Section>
+
+      <Section
+        title="Attendance Statistics"
+        elevation={1}
+        collapsible={true}
+        icon="chart"
+      >
+        <Bar data={data.attendanceStats} />
+      </Section>
+
+      <Section
+        title="Course Distribution"
+        elevation={1}
+        collapsible={true}
+        className=" h-[300px]"
+        icon="pie-chart"
+      >
+        {/* <Doughnut data={data.courseDistribution} /> */}
+        {/* <Doughnut data={data.courseDistribution} /> */}
+        <Doughnut
+          data={data.courseDistribution}
+          options={{
+            responsive: true,
+            maintainAspectRatio: false,
+          }}
+        />
+      </Section>
+      <Section title="Admin Actions" elevation={1}>
+        <SectionCard className=" gap-1 flex">
+          <Button
+            intent={Intent.PRIMARY}
+            text="Add Lecturer"
+            onClick={() => setIsAddLecturerOpen(true)}
+          />
+          <Button
+            intent={Intent.PRIMARY}
+            text="Add Course"
+            onClick={() => setIsAddCourseOpen(true)}
+          />
+          <Button
+            intent={Intent.PRIMARY}
+            text="Add Timetable Entry"
+            onClick={() => setIsAddTimetableOpen(true)}
+          />
+        </SectionCard>
+      </Section>
+
+      {/* Updated Dialog components */}
+      <Dialog
+        isOpen={isAddLecturerOpen}
+        onClose={() => setIsAddLecturerOpen(false)}
+        title="Add Lecturer"
+        icon="add"
+      >
+        <DialogBody>
+          <FormGroup label="Name" labelFor="lecturer-name">
+            <InputGroup id="lecturer-name" placeholder="Enter lecturer name" />
+          </FormGroup>
+          <FormGroup label="Email" labelFor="lecturer-email">
+            <InputGroup
+              id="lecturer-email"
+              placeholder="Enter lecturer email"
+            />
+          </FormGroup>
+          <FormGroup label="Password" labelFor="lecturer-password">
+            <InputGroup
+              id="lecturer-password"
+              type="password"
+              placeholder="Enter password"
+            />
+          </FormGroup>
+        </DialogBody>
+        <DialogFooter
+          actions={
+            <>
+              <Button
+                text="Cancel"
+                onClick={() => setIsAddLecturerOpen(false)}
+              />
+              <Button
+                intent={Intent.PRIMARY}
+                text="Add Lecturer"
+                onClick={() => {
+                  const name = (
+                    document.getElementById("lecturer-name") as HTMLInputElement
+                  ).value;
+                  const email = (
+                    document.getElementById(
+                      "lecturer-email"
+                    ) as HTMLInputElement
+                  ).value;
+                  const password = (
+                    document.getElementById(
+                      "lecturer-password"
+                    ) as HTMLInputElement
+                  ).value;
+                  handleAddLecturer(name, email, password);
+                }}
+              />
+            </>
+          }
+        />
+      </Dialog>
+
+      <Dialog
+        isOpen={isAddCourseOpen}
+        onClose={() => setIsAddCourseOpen(false)}
+        title="Add Course"
+        icon="book"
+      >
+        <DialogBody>
+          <FormGroup label="Course Name" labelFor="course-name">
+            <InputGroup id="course-name" placeholder="Enter course name" />
+          </FormGroup>
+          <FormGroup label="Lecturer ID" labelFor="lecturer-id">
+            <InputGroup id="lecturer-id" placeholder="Enter lecturer ID" />
+          </FormGroup>
+        </DialogBody>
+        <DialogFooter
+          actions={
+            <>
+              <Button text="Cancel" onClick={() => setIsAddCourseOpen(false)} />
+              <Button
+                intent={Intent.PRIMARY}
+                text="Add Course"
+                onClick={() => {
+                  const courseName = (
+                    document.getElementById("course-name") as HTMLInputElement
+                  ).value;
+                  const lecturerId = (
+                    document.getElementById("lecturer-id") as HTMLInputElement
+                  ).value;
+                  handleAddCourse(courseName, lecturerId);
+                }}
+              />
+            </>
+          }
+        />
+      </Dialog>
+
+      <Dialog
+        isOpen={isAddTimetableOpen}
+        onClose={() => setIsAddTimetableOpen(false)}
+        title="Add Timetable Entry"
+        icon="calendar"
+      >
+        <DialogBody>
+          <FormGroup label="Course ID" labelFor="timetable-course-id">
+            <InputGroup
+              id="timetable-course-id"
+              placeholder="Enter course ID"
+            />
+          </FormGroup>
+          <FormGroup label="Day" labelFor="timetable-day">
+            <InputGroup
+              id="timetable-day"
+              placeholder="Enter day (e.g., Monday)"
+            />
+          </FormGroup>
+          <FormGroup label="Start Time" labelFor="timetable-start-time">
+            <InputGroup
+              id="timetable-start-time"
+              placeholder="Enter start time (HH:MM)"
+            />
+          </FormGroup>
+          <FormGroup label="End Time" labelFor="timetable-end-time">
+            <InputGroup
+              id="timetable-end-time"
+              placeholder="Enter end time (HH:MM)"
+            />
+          </FormGroup>
+        </DialogBody>
+        <DialogFooter
+          actions={
+            <>
+              <Button
+                text="Cancel"
+                onClick={() => setIsAddTimetableOpen(false)}
+              />
+              <Button
+                intent={Intent.PRIMARY}
+                text="Add Timetable Entry"
+                onClick={() => {
+                  const courseId = (
+                    document.getElementById(
+                      "timetable-course-id"
+                    ) as HTMLInputElement
+                  ).value;
+                  const day = (
+                    document.getElementById("timetable-day") as HTMLInputElement
+                  ).value;
+                  const startTime = (
+                    document.getElementById(
+                      "timetable-start-time"
+                    ) as HTMLInputElement
+                  ).value;
+                  const endTime = (
+                    document.getElementById(
+                      "timetable-end-time"
+                    ) as HTMLInputElement
+                  ).value;
+                  handleAddTimetable(courseId, day, startTime, endTime);
+                }}
+              />
+            </>
+          }
+        />
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminDashboard;
+
+================================================================================
+
+File: pages\admin\Login.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { useSetAtom } from "jotai";
+import { useNavigate } from "react-router-dom";
+import {
+  Button,
+  Card,
+  FormGroup,
+  H2,
+  InputGroup,
+  Intent,
+  Callout,
+} from "@blueprintjs/core";
+import { loginAdmin } from "../../services/auth";
+import { userAtom } from "../../store/auth";
+// import { toast } from 'react-toastify';
+
+const AdminLogin: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const setUser = useSetAtom(userAtom);
+  const navigate = useNavigate();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const userData = await loginAdmin(email, password);
+      setUser({
+        id: userData.id,
+        role: userData.role,
+        name: userData.name,
+        token: userData.access_token,
+      });
+      localStorage.setItem("token", userData.access_token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: userData.id,
+          role: userData.role,
+          name: userData.name,
+        })
+      );
+      // toast.success("Login successful!");
+      console.log("Login successful!");
+      navigate("/admin/dashboard");
+    } catch (error) {
+      console.error("Login failed:", error);
+      setError("Login failed. Please check your credentials and try again.");
+      // toast.error("Login failed. Please try again.");
+      console.log("Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card elevation={2}>
+      <H2>Admin Login</H2>
+      {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      <form onSubmit={handleLogin}>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <Button type="submit" intent={Intent.PRIMARY} loading={isLoading}>
+          Log In
+        </Button>
+      </form>
+    </Card>
+  );
+};
+
+export default AdminLogin;
+
+================================================================================
+
+File: pages\admin\Register.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Card,
+  FormGroup,
+  InputGroup,
+  Button,
+  Intent,
+  H2,
+} from "@blueprintjs/core";
+import api from "../../services/api";
+
+const AdminRegister: React.FC = () => {
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await api.post("/admin/register", {
+        password,
+        name,
+        email,
+      });
+      alert("Administrator registered successfully!");
+      navigate("/admin/login");
+    } catch (error) {
+      console.error("Registration failed:", error);
+      alert("Failed to register administrator. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card elevation={2}>
+      <H2>Register Administrator</H2>
+      <form onSubmit={handleRegister}>
+        <FormGroup label="Name" labelFor="name-input">
+          <InputGroup
+            id="name-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <Button type="submit" intent={Intent.PRIMARY} loading={isLoading}>
+          Register
+        </Button>
+      </form>
+    </Card>
+  );
+};
+
+export default AdminRegister;
+
+================================================================================
+
+File: pages\admin\RegisterStudent.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import {
+  Card,
+  Button,
+  Intent,
+  Callout,
+  FormGroup,
+  InputGroup,
+} from "@blueprintjs/core";
+
+import { registerStudent } from "../../services/api";
+import FaceCapture from "../../components/FaceCapture";
+
+interface Student {
+  student_id: string;
+  name: string;
+  email: string;
+}
+
+const RegisterStudentPage: React.FC = () => {
+  const [studentData, setStudentData] = useState<Student>({
+    student_id: "",
+    name: "",
+    email: "",
+  });
+  const [images, setImages] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setStudentData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    if (images.length < 1) {
+      setError("Please capture at least one image of the student.");
+      return;
+    }
+
+    try {
+      await registerStudent(studentData, images);
+      setStudentData({ student_id: "", name: "", email: "" });
+      setImages([]);
+      alert("Student registered successfully!");
+    } catch (error: any) {
+      setError(
+        error.response?.data?.error ||
+          "Failed to register student. Please try again."
+      );
+    }
+  };
+
+  return (
+    <Card>
+      <h2>Register New Student</h2>
+      {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      <form onSubmit={handleSubmit}>
+        <FormGroup
+          label="Student ID"
+          labelFor="student_id-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="student_id-input"
+            name="student_id"
+            placeholder="Enter student ID"
+            value={studentData.student_id}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Name" labelFor="name-input" labelInfo="(required)">
+          <InputGroup
+            id="name-input"
+            name="name"
+            placeholder="Enter full name"
+            value={studentData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Email" labelFor="email-input" labelInfo="(required)">
+          <InputGroup
+            id="email-input"
+            name="email"
+            placeholder="Enter email address"
+            value={studentData.email}
+            onChange={handleInputChange}
+            type="email"
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Student Image" labelFor="image-capture">
+          <FaceCapture onCapture={setImages} />
+        </FormGroup>
+        <Button
+          type="submit"
+          intent={Intent.PRIMARY}
+          text="Register Student"
+          disabled={
+            !studentData.student_id ||
+            !studentData.name ||
+            !studentData.email ||
+            images.length < 1
+          }
+        />
+      </form>
+    </Card>
+  );
+};
+
+export default RegisterStudentPage;
+
+================================================================================
+
+File: pages\admin\RegisterTeacher.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import {
+  Card,
+  Button,
+  Intent,
+  Callout,
+  FormGroup,
+  InputGroup,
+} from "@blueprintjs/core";
+import { registerLecturer } from "../../services/api";
+
+interface Lecturer {
+  name: string;
+  email: string;
+  password: string;
+}
+
+const RegisterLecturerPage: React.FC = () => {
+  const [lecturerData, setLecturerData] = useState<Lecturer>({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setLecturerData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    try {
+      await registerLecturer(lecturerData);
+      setLecturerData({ name: "", email: "", password: "" });
+      alert("Lecturer registered successfully!");
+    } catch (error: any) {
+      setError(
+        error.response?.data?.error ||
+          "Failed to register lecturer. Please try again."
+      );
+    }
+  };
+
+  return (
+    <Card>
+      <h2>Register New Lecturer</h2>
+      {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      <form onSubmit={handleSubmit}>
+        <FormGroup label="Name" labelFor="name-input" labelInfo="(required)">
+          <InputGroup
+            id="name-input"
+            name="name"
+            placeholder="Enter full name"
+            value={lecturerData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Email" labelFor="email-input" labelInfo="(required)">
+          <InputGroup
+            id="email-input"
+            name="email"
+            placeholder="Enter email address"
+            value={lecturerData.email}
+            onChange={handleInputChange}
+            type="email"
+            required
+          />
+        </FormGroup>
+        <FormGroup
+          label="Password"
+          labelFor="password-input"
+          labelInfo="(required)"
+        >
+          <InputGroup
+            id="password-input"
+            name="password"
+            placeholder="Enter password"
+            value={lecturerData.password}
+            onChange={handleInputChange}
+            type="password"
+            required
+          />
+        </FormGroup>
+        <Button
+          type="submit"
+          intent={Intent.PRIMARY}
+          text="Register Lecturer"
+          disabled={
+            !lecturerData.name || !lecturerData.email || !lecturerData.password
+          }
+        />
+      </form>
+    </Card>
+  );
+};
+
+export default RegisterLecturerPage;
+
+================================================================================
+
+File: pages\lecturer\Dashboard.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  H2,
+  H3,
+  Button,
+  HTMLTable,
+  Spinner,
+  Intent,
+  Callout,
+  Section,
+  SectionCard,
+} from "@blueprintjs/core";
+import { Cell, Column, Table2 } from "@blueprintjs/table";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { fetchTeacherDashboardData } from "../../services/api";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface Student {
+  student_id: string;
+  name: string;
+  email: string;
+  status: "active" | "inactive";
+}
+
+interface Course {
+  course_id: string;
+  course_name: string;
+  active_students: number;
+  total_students: number;
+}
+
+interface TimetableEntry {
+  day: string;
+  start_time: string;
+  end_time: string;
+  course_name: string;
+}
+
+interface TeacherDashboardData {
+  activeStudents: Student[];
+  courses: Course[];
+  timetable: TimetableEntry[];
+  attendanceStats: {
+    labels: string[];
+    datasets: {
+      label: string;
+      data: number[];
+      backgroundColor: string;
+    }[];
+  };
+}
+
+const TeacherDashboard: React.FC = () => {
+  const [data, setData] = useState<TeacherDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const dashboardData = await fetchTeacherDashboardData();
+        setData(dashboardData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return <Spinner />;
+  }
+
+  if (!data) {
+    return <Callout intent={Intent.DANGER}>Failed to load data.</Callout>;
+  }
+
+  return (
+    <div className="teacher-dashboard">
+      <H2>Teacher Dashboard</H2>
+
+      <Section
+        title="Active Students"
+        elevation={1}
+        collapsible={true}
+        icon="user"
+      >
+        <Table2 numRows={data.activeStudents.length}>
+          <Column
+            name="Student ID"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.activeStudents[rowIndex].student_id}</Cell>
+            )}
+          />
+          <Column
+            name="Name"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.activeStudents[rowIndex].name}</Cell>
+            )}
+          />
+          <Column
+            name="Email"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.activeStudents[rowIndex].email}</Cell>
+            )}
+          />
+          <Column
+            name="Status"
+            cellRenderer={(rowIndex) => (
+              <Cell>{data.activeStudents[rowIndex].status}</Cell>
+            )}
+          />
+        </Table2>
+      </Section>
+
+      <Section title="Courses" elevation={1} collapsible={true} icon="book">
+        <HTMLTable>
+          <thead>
+            <tr>
+              <th>Course ID</th>
+              <th>Course Name</th>
+              <th>Active Students</th>
+              <th>Total Students</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.courses.map((course) => (
+              <tr key={course.course_id}>
+                <td>{course.course_id}</td>
+                <td>{course.course_name}</td>
+                <td>{course.active_students}</td>
+                <td>{course.total_students}</td>
+              </tr>
+            ))}
+          </tbody>
+        </HTMLTable>
+      </Section>
+
+      <Section
+        title="Timetable"
+        elevation={1}
+        collapsible={true}
+        icon="calendar"
+      >
+        <HTMLTable>
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Course</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.timetable.map((entry, index) => (
+              <tr key={index}>
+                <td>{entry.day}</td>
+                <td>{entry.start_time}</td>
+                <td>{entry.end_time}</td>
+                <td>{entry.course_name}</td>
+              </tr>
+            ))}
+          </tbody>
+        </HTMLTable>
+      </Section>
+
+      <Section
+        title="Attendance Statistics"
+        elevation={1}
+        collapsible={true}
+        icon="chart"
+      >
+        <Bar data={data.attendanceStats} />
+      </Section>
+
+      <Section title="Actions" elevation={1}>
+        <SectionCard>
+          <Button
+            intent={Intent.PRIMARY}
+            text="End All Active Sessions"
+            onClick={() => {
+              /* Implement end all sessions logic */
+            }}
+          />
+        </SectionCard>
+      </Section>
+    </div>
+  );
+};
+
+export default TeacherDashboard;
+
+================================================================================
+
+File: pages\lecturer\Login.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { useSetAtom } from "jotai";
+import { useNavigate } from "react-router-dom";
+import {
+  Button,
+  Callout,
+  Card,
+  FormGroup,
+  H2,
+  InputGroup,
+  Intent,
+} from "@blueprintjs/core";
+import { loginLecturer } from "../../services/auth";
+import { userAtom } from "../../store/auth";
+
+const LecturerLogin: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const setUser = useSetAtom(userAtom);
+  const navigate = useNavigate();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const userData = await loginLecturer(email, password);
+      setUser({
+        id: userData.id,
+        role: userData.role,
+        name: userData.name,
+        token: userData.access_token,
+      });
+      localStorage.setItem("token", userData.access_token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: userData.id,
+          role: userData.role,
+          name: userData.name,
+        })
+      );
+      console.log("Login successful!");
+      navigate("/lecturer/dashboard");
+    } catch (error) {
+      console.error("Login failed:", error);
+      setError("Login failed. Please check your credentials and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card elevation={2}>
+      <H2>Lecturer Login</H2>
+      {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      <form onSubmit={handleLogin}>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </FormGroup>
+        <Button type="submit" intent={Intent.PRIMARY} loading={isLoading}>
+          Log In
+        </Button>
+      </form>
+    </Card>
+  );
+};
+
+export default LecturerLogin;
+
+================================================================================
+
+File: pages\student\Dashboard.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import { useAtom } from "jotai";
+import { Card, H2, H4, Tag, Intent, Spinner } from "@blueprintjs/core";
+import { userAtom } from "../../store/auth";
+import api from "../../services/api";
+
+interface AttendanceRecord {
+  courseId: string;
+  courseName: string;
+  attendancePercentage: number;
+  totalSessions: number;
+  attendedSessions: number;
+}
+
+const StudentDashboard: React.FC = () => {
+  const [user] = useAtom(userAtom);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      try {
+        const response = await api.get(`/student/attendance/${user?.id}`);
+        setAttendanceData(response.data);
+      } catch (error) {
+        console.error("Failed to fetch attendance data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAttendanceData();
+  }, [user]);
+
+  if (isLoading) {
+    return <Spinner />;
+  }
+
+  const overallAttendance =
+    attendanceData.reduce(
+      (sum, record) => sum + record.attendancePercentage,
+      0
+    ) / attendanceData.length;
+
+  return (
+    <div>
+      <H2>Student Dashboard</H2>
+      <Card elevation={2}>
+        <H4>User Information</H4>
+        <p>Name: {user?.name}</p>
+        <p>ID: {user?.id}</p>
+        <p>Overall Attendance: {overallAttendance.toFixed(2)}%</p>
+      </Card>
+      <H4 className="mt-4">Course Attendance</H4>
+      {attendanceData.map((record) => (
+        <Card key={record.courseId} elevation={2} className="mt-2">
+          <H4>{record.courseName}</H4>
+          <p>Attendance: {record.attendancePercentage.toFixed(2)}%</p>
+          <p>
+            Sessions Attended: {record.attendedSessions} /{" "}
+            {record.totalSessions}
+          </p>
+          <Tag
+            intent={
+              record.attendancePercentage >= 75 ? Intent.SUCCESS : Intent.DANGER
+            }
+          >
+            {record.attendancePercentage >= 75
+              ? "Good Standing"
+              : "Attention Required"}
+          </Tag>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+export default StudentDashboard;
+
+================================================================================
+
+File: pages\student\Login.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { useSetAtom } from "jotai";
+import { useNavigate } from "react-router-dom";
+import { Button, Card, H2, Intent, Spinner } from "@blueprintjs/core";
+import { loginStudent } from "../../services/auth";
+import { userAtom } from "../../store/auth";
+
+const StudentLogin: React.FC = () => {
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const setUser = useSetAtom(userAtom);
+  const navigate = useNavigate();
+
+  const handleStartFaceRecognition = () => {
+    setIsCameraActive(true);
+    // Implement face recognition logic here
+    // For demonstration, we'll use a timeout to simulate the process
+    setTimeout(() => {
+      const simulatedFaceId = "face_123";
+      handleFaceRecognized(simulatedFaceId);
+    }, 3000);
+  };
+
+  const handleFaceRecognized = async (faceId: string) => {
+    setIsLoading(true);
+    try {
+      const userData = await loginStudent(faceId);
+      setUser({
+        id: userData.id,
+        role: "student",
+        name: userData.name,
+        token: userData.token,
+      });
+      localStorage.setItem("token", userData.token);
+      navigate("/student/dashboard");
+    } catch (error) {
+      console.error("Face recognition failed:", error);
+    } finally {
+      setIsLoading(false);
+      setIsCameraActive(false);
+    }
+  };
+
+  return (
+    <Card elevation={2}>
+      <H2>Student Login</H2>
+      {!isCameraActive ? (
+        <Button
+          onClick={handleStartFaceRecognition}
+          intent={Intent.PRIMARY}
+          disabled={isLoading}
+        >
+          Start Face Recognition
+        </Button>
+      ) : (
+        <div>
+          {isLoading ? <Spinner /> : <p>Face recognition in progress...</p>}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+export default StudentLogin;
+
+================================================================================
+
+File: services\api.ts
+--------------------------------------------------------------------------------
+import axios from "axios";
+import { AdminDashboardData } from "../pages/admin/Dashboard";
+
+const API_URL = "http://localhost:5000/api";
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+export default api;
+interface Student {
+  student_id: string;
+  name: string;
+  email: string;
+}
+
+interface Lecturer {
+  name: string;
+  email: string;
+  password: string;
+}
+export const registerStudent = async (studentData: Student, images: File[]) => {
+  const formData = new FormData();
+  formData.append("student_id", studentData.student_id);
+  formData.append("name", studentData.name);
+  formData.append("email", studentData.email);
+  images.forEach((image, index) => {
+    formData.append("files", image, `face_${index}.jpg`);
+  });
+
+  const response = await api.post("/admin/register_student", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+// export const registerLecturer = async (lecturerData: Lecturer) => {
+//   const token = localStorage.getItem("token");
+//   const response = await api.post("/admin/register_lecturer", lecturerData, {
+//     headers: {
+//       Authorization: `Bearer ${token}`,
+//       "Content-Type": "application/json",
+//     },
+//   });
+//   return response.data;
+// };
+
+export const fetchTeacherDashboardData = async () => {
+  const response = await api.get("/teacher/dashboard", {
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
+  return response.data;
+};
+
+export const endAllTeacherSessions = async () => {
+  const response = await api.post(
+    "/teacher/end_all_sessions",
+    {},
+    {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    }
+  );
+  return response.data;
+};
+
+export const fetchAdminDashboardData =
+  async (): Promise<AdminDashboardData> => {
+    const response = await api.get("/admin/dashboard", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    return response.data;
+  };
+
+export const registerLecturer = async (
+  name: string,
+  email: string,
+  password: string
+): Promise<void> => {
+  const response = await api.post(
+    "/admin/register_lecturer",
+    { name, email, password },
+    {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    }
+  );
+  return response.data;
+};
+
+export const addCourse = async (
+  courseName: string,
+  lecturerId: string
+): Promise<void> => {
+  const response = await api.post(
+    "/admin/add_course",
+    { course_name: courseName, lecturer_id: lecturerId },
+    {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    }
+  );
+  return response.data;
+};
+
+export const addTimetableEntry = async (
+  courseId: string,
+  day: string,
+  startTime: string,
+  endTime: string
+): Promise<void> => {
+  const response = await api.post(
+    "/admin/add_timetable",
+    { course_id: courseId, day, start_time: startTime, end_time: endTime },
+    {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    }
+  );
+  return response.data;
+};
+
+================================================================================
+
+File: services\auth.ts
+--------------------------------------------------------------------------------
+import api from "./api";
+
+export const loginStudent = async (faceId: string) => {
+  const response = await api.post("/student/login", { faceId });
+  return response.data;
+};
+
+export const loginLecturer = async (email: string, password: string) => {
+  try {
+    const response = await api.post("/lecturer/login", { email, password });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const loginAdmin = async (email: string, password: string) => {
+  try {
+    const response = await api.post("/admin/login", { email, password });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
+
+================================================================================
+
+File: store\auth.ts
+--------------------------------------------------------------------------------
+import { atom } from "jotai";
+
+interface User {
+  id: string;
+  role: "student" | "lecturer" | "admin";
+  name: string;
+  token: string;
+}
+
+export const userAtom = atom<User | null>(null);
+
+================================================================================
+
+File: utils\sessionManager.ts
+--------------------------------------------------------------------------------
+import { jwtDecode } from "jwt-decode";
+import { userAtom } from "../store/auth";
+import { useSetAtom } from "jotai";
+
+interface DecodedToken {
+  exp: number;
+}
+
+export const checkSessionExpiration = () => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    const decodedToken = jwtDecode(token) as DecodedToken;
+    const currentTime = Date.now() / 1000;
+
+    if (decodedToken.exp < currentTime) {
+      // Token has expired
+      return true;
+    }
+  }
+  return false;
+};
+
+export const useLogout = () => {
+  const setUser = useSetAtom(userAtom);
+
+  return () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+};
+
+================================================================================
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   H2,
@@ -14,6 +14,7 @@ import {
   SectionCard,
   DialogBody,
   DialogFooter,
+  Tag,
 } from "@blueprintjs/core";
 import { Cell, Column, Table2 } from "@blueprintjs/table";
 import { Bar, Doughnut } from "react-chartjs-2";
@@ -92,28 +93,24 @@ const AdminDashboard: React.FC = () => {
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isAddTimetableOpen, setIsAddTimetableOpen] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!data) {
+      // Only fetch if data is not already loaded
       try {
-        const dashboardData = await fetchAdminDashboardData();
+        setLoading(true);
+        const dashboardData = await fetchAdminDashboardData(); // or fetchTeacherDashboardData
         setData(dashboardData);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
         setLoading(false);
       }
-    };
+    }
+  }, [data]); // Add data as a dependency
 
+  useEffect(() => {
     loadData();
-  }, []);
-
-  if (loading) {
-    return <Spinner />;
-  }
-
-  if (!data) {
-    return <div>Failed to load dashboard data.</div>;
-  }
+  }, [loadData]);
 
   const handleAddLecturer = async (
     name: string,
@@ -122,21 +119,20 @@ const AdminDashboard: React.FC = () => {
   ) => {
     try {
       await registerLecturer(name, email, password);
-      // Refresh dashboard data
-      const dashboardData = await fetchAdminDashboardData();
-      setData(dashboardData);
+      setData(null); // Reset data to trigger a re-fetch
+      loadData(); // Re-fetch data
       setIsAddLecturerOpen(false);
     } catch (error) {
       console.error("Failed to add lecturer:", error);
     }
   };
 
+  // Apply similar changes to handleAddCourse and handleAddTimetable
   const handleAddCourse = async (courseName: string, lecturerId: string) => {
     try {
       await addCourse(courseName, lecturerId);
-      // Refresh dashboard data
-      const dashboardData = await fetchAdminDashboardData();
-      setData(dashboardData);
+      setData(null);
+      loadData();
       setIsAddCourseOpen(false);
     } catch (error) {
       console.error("Failed to add course:", error);
@@ -151,32 +147,37 @@ const AdminDashboard: React.FC = () => {
   ) => {
     try {
       await addTimetableEntry(courseId, day, startTime, endTime);
-      // Refresh dashboard data
-      const dashboardData = await fetchAdminDashboardData();
-      setData(dashboardData);
+      setData(null);
+      loadData();
       setIsAddTimetableOpen(false);
     } catch (error) {
       console.error("Failed to add timetable entry:", error);
     }
   };
-  console.log("Course Distribution Data:", data.courseDistribution);
 
+  if (loading) {
+    return <Spinner />;
+  }
+
+  if (!data) {
+    return <div>Failed to load dashboard data.</div>;
+  }
   return (
-    <div className="admin-dashboard">
+    <div className="grid gap-2">
       <H2>Admin Dashboard</H2>
 
       <Section title="Dashboard Summary" elevation={1}>
         <SectionCard>
           <H3>Total Students</H3>
-          <p>{data.totalStudents}</p>
+          <Tag>{data.totalStudents}</Tag>
         </SectionCard>
         <SectionCard>
           <H3>Total Lecturers</H3>
-          <p>{data.totalLecturers}</p>
+          <Tag intent="primary">{data.totalLecturers}</Tag>
         </SectionCard>
         <SectionCard>
           <H3>Total Courses</H3>
-          <p>{data.totalCourses}</p>
+          <Tag intent="success">{data.totalCourses}</Tag>
         </SectionCard>
       </Section>
 

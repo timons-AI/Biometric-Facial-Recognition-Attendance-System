@@ -30,7 +30,7 @@ class FaceRecognition:
             self.images_placeholder = None
             self.embeddings = None
             self.phase_train_placeholder = None
-            self.face_detector = MTCNN()
+            self.face_detector = MTCNN(min_face_size=20, steps_threshold=[0.6, 0.7, 0.7])
             self.load_facenet_model()
 
     def load_facenet_model(self):
@@ -55,9 +55,16 @@ class FaceRecognition:
             return None
 
     def detect_faces(self, frame):
-        return self.face_detector.detect_faces(frame)
+        logger.info(f"Detecting faces in frame of shape {frame.shape}")
+        faces = self.face_detector.detect_faces(frame)
+        logger.info(f"Detected {len(faces)} faces")
+        if len(faces) == 0:
+            logger.warning("No faces detected. Saving debug image.")
+            cv2.imwrite('debug_no_faces.jpg', frame)
+        return faces
 
     def align_face(self, image, face):
+        logger.debug(f"Aligning face: {face}")
         bounding_box = face['box']
         keypoints = face['keypoints']
         
@@ -79,6 +86,7 @@ class FaceRecognition:
         # Extract the face
         (x, y, w, h) = bounding_box
         face_img = aligned_image[y:y+h, x:x+w]
+        logger.debug(f"Aligned face shape: {face_img.shape}")
         
         return cv2.resize(face_img, (160, 160))
 
@@ -87,16 +95,19 @@ class FaceRecognition:
         return face_image
 
     def get_face_embedding(self, face_image):
+        logger.debug(f"Getting face embedding for image of shape {face_image.shape}")
         try:
             if self.sess is None:
                 logger.error("TensorFlow session is not initialized")
                 return None
             preprocessed_image = self.preprocess_face(face_image)
+            logger.debug(f"Preprocessed image shape: {preprocessed_image.shape}")
             feed_dict = {
                 self.images_placeholder: [preprocessed_image],
                 self.phase_train_placeholder: False
             }
             face_embedding = self.sess.run(self.embeddings, feed_dict=feed_dict)[0]
+            logger.debug(f"Face embedding shape: {face_embedding.shape}")
             return face_embedding
         except Exception as e:
             logger.error(f"Error getting face embedding: {e}")
@@ -157,10 +168,9 @@ class FaceRecognition:
         
         return augmented
 
-    def recognize_face(self, input_embedding, stored_embeddings, threshold=0.7):
+    def recognize_face(self, input_embedding, stored_embeddings, threshold=0.6):
         if not stored_embeddings:
             return False
-        numpy_stored_embeddings = [np.array(emb) for emb in stored_embeddings]
         distances = [cosine(input_embedding, emb) for emb in stored_embeddings]
         min_distance = min(distances)
         return min_distance < threshold
@@ -170,7 +180,7 @@ class FaceRecognition:
             return None
         
         aligned_face = self.align_face(face_image, self.detect_faces(face_image)[0])
-        embeddings = self.get_multiple_embeddings(aligned_face)
+        embeddings = self.get_multiple_embeddings(aligned_face, num_augmentations=10)
         return embeddings
 
     def verify_face(self, face_image, stored_embeddings):

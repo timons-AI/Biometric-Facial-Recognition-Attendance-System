@@ -58,7 +58,7 @@ const AdminLogin: React.FC = () => {
   };
 
   return (
-    <Card elevation={2}>
+    <Card>
       <H2>Admin Login</H2>
       {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
       <form onSubmit={handleLogin}>
@@ -80,7 +80,7 @@ const AdminLogin: React.FC = () => {
             required
           />
         </FormGroup>
-        <Button type="submit" intent={Intent.PRIMARY} loading={isLoading}>
+        <Button type="submit" fill intent={Intent.PRIMARY} loading={isLoading}>
           Log In
         </Button>
       </form>

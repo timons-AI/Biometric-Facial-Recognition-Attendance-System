@@ -1,64 +1,92 @@
 import React, { useState } from "react";
 import { useSetAtom } from "jotai";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, H2, Intent, Spinner } from "@blueprintjs/core";
-import { loginStudent } from "../../services/auth";
+import {
+  Button,
+  Callout,
+  Card,
+  FormGroup,
+  H2,
+  InputGroup,
+  Intent,
+} from "@blueprintjs/core";
+import { studentLogin } from "../../services/api";
 import { userAtom } from "../../store/auth";
 
-const StudentLogin: React.FC = () => {
-  const [isCameraActive, setIsCameraActive] = useState(false);
+const StudentLoginPage: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const setUser = useSetAtom(userAtom);
   const navigate = useNavigate();
 
-  const handleStartFaceRecognition = () => {
-    setIsCameraActive(true);
-    // Implement face recognition logic here
-    // For demonstration, we'll use a timeout to simulate the process
-    setTimeout(() => {
-      const simulatedFaceId = "face_123";
-      handleFaceRecognized(simulatedFaceId);
-    }, 3000);
-  };
-
-  const handleFaceRecognized = async (faceId: string) => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
+    setError(null);
+
     try {
-      const userData = await loginStudent(faceId);
+      const userData = await studentLogin(email, password);
       setUser({
-        id: userData.id,
+        id: userData.student_id,
         role: "student",
-        name: userData.name,
-        token: userData.token,
+        name: userData.name, // Assuming the API returns the student's name
+        token: userData.access_token,
       });
-      localStorage.setItem("token", userData.token);
+      localStorage.setItem("token", userData.access_token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: userData.student_id,
+          role: "student",
+          name: userData.name,
+        })
+      );
+      console.log("Student login successful!");
       navigate("/student/dashboard");
     } catch (error) {
-      console.error("Face recognition failed:", error);
+      console.error("Student login failed:", error);
+      setError("Login failed. Please check your credentials and try again.");
     } finally {
       setIsLoading(false);
-      setIsCameraActive(false);
     }
   };
 
   return (
-    <Card elevation={2}>
+    <Card>
       <H2>Student Login</H2>
-      {!isCameraActive ? (
+      {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      <form onSubmit={handleLogin}>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </FormGroup>
         <Button
-          onClick={handleStartFaceRecognition}
+          type="submit"
           intent={Intent.PRIMARY}
-          disabled={isLoading}
-        >
-          Start Face Recognition
-        </Button>
-      ) : (
-        <div>
-          {isLoading ? <Spinner /> : <p>Face recognition in progress...</p>}
-        </div>
-      )}
+          text="Login"
+          loading={isLoading}
+        />
+      </form>
     </Card>
   );
 };
 
-export default StudentLogin;
+export default StudentLoginPage;

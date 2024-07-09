@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   H2,
@@ -54,7 +54,7 @@ interface TimetableEntry {
   course_name: string;
 }
 
-interface TeacherDashboardData {
+export interface TeacherDashboardData {
   activeStudents: Student[];
   courses: Course[];
   timetable: TimetableEntry[];
@@ -72,20 +72,21 @@ const TeacherDashboard: React.FC = () => {
   const [data, setData] = useState<TeacherDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const dashboardData = await fetchTeacherDashboardData();
-        setData(dashboardData);
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+  const loadData = useCallback(async () => {
+    try {
+      const dashboardData: TeacherDashboardData =
+        await fetchTeacherDashboardData();
+      setData(dashboardData);
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   if (loading) {
     return <Spinner />;

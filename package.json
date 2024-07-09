@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "@blueprintjs/core": "^5.10.5",
-    "@blueprintjs/table": "^5.1.7",
-    "axios": "^1.7.2"
-  }
-}

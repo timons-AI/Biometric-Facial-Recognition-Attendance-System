@@ -18,6 +18,9 @@ import os
 from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func, distinct, case
+from pytz import timezone
 
 
 # Import the FaceRecognition class
@@ -60,9 +63,9 @@ class Student(db.Model):
     student_id = db.Column(db.String(50), primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     face_encodings = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
-
 class Lecturer(db.Model):
     __tablename__ = 'lecturers'
     lecturer_id = db.Column(db.Integer, primary_key=True)
@@ -108,6 +111,7 @@ class StudentSchema(Schema):
     student_id = fields.Str(required=True)
     name = fields.Str(required=True)
     email = fields.Email(required=True)
+    password = fields.Str(required=True, validate=validate.Length(min=6))
 
 class LecturerSchema(Schema):
     name = fields.Str(required=True)
@@ -203,50 +207,81 @@ def admin_login():
 def register_student():
     try:
         data = request.form
-        errors = student_schema.validate(data)
-        if errors:
-            return jsonify({"error": errors}), 400
-
         files = request.files.getlist('files')
+
+        # Validate input data
+        required_fields = ['student_id', 'name', 'email', 'password']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        # Validate files
         if not files:
             return jsonify({"error": "No files provided"}), 400
 
         face_embeddings = []
+        face_recognition = FaceRecognition.get_instance()
+
         for file in files:
             if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
+                try:
+                    filename = secure_filename(file.filename)
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
 
-                image = cv2.imread(filepath)
-                face_embedding = face_recognition.register_face(image)
-                if face_embedding:
-                    face_embeddings.extend(face_embedding)
+                    logger.info(f"Processing image: {filename}")
+                    image = cv2.imread(filepath)
+                    
+                    if image is None:
+                        logger.warning(f"Could not read image: {filename}")
+                        continue
 
-                os.remove(filepath)
+                    faces = face_recognition.detect_faces(image)
+                    
+                    if not faces:
+                        logger.warning(f"No faces detected in image: {filename}")
+                        continue
+
+                    for face in faces:
+                        try:
+                            aligned_face = face_recognition.align_face(image, face)
+                            face_embedding = face_recognition.get_face_embedding(aligned_face)
+                            
+                            if face_embedding is not None and len(face_embedding) > 0:
+                                face_embeddings.append(face_embedding.tolist())
+                                logger.info(f"Face embedding added. Total embeddings: {len(face_embeddings)}")
+                            else:
+                                logger.warning(f"Invalid face embedding for face in {filename}")
+                        except Exception as e:
+                            logger.error(f"Error processing face in {filename}: {str(e)}")
+
+                except Exception as e:
+                    logger.error(f"Error processing file {filename}: {str(e)}")
+                finally:
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
 
         if not face_embeddings:
-            return jsonify({"error": "No valid face found in the images"}), 400
+            return jsonify({"error": "No valid faces found in the uploaded images"}), 400
 
+        # Create new student
         new_student = Student(
             student_id=data['student_id'],
             name=data['name'],
             email=data['email'],
+            password=generate_password_hash(data['password']),
             face_encodings=face_embeddings
         )
+
         db.session.add(new_student)
         db.session.commit()
 
         return jsonify({"message": "Student registered successfully"}), 201
+
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error registering student: {e}")
-        return jsonify({"error": str(e)}), 500
-
-from flask import jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import func
-from datetime import datetime, timedelta
+        logger.error(f"Error registering student: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred while registering the student"}), 500
 
 @app.route('/api/admin/dashboard', methods=['GET'])
 @jwt_required()
@@ -425,64 +460,260 @@ def admin_add_timetable():
 
 @app.route('/api/student/login', methods=['POST'])
 def student_login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    student = Student.query.filter_by(email=email).first()
+    
+    if student and check_password_hash(student.password, password):
+        access_token = create_access_token(identity=student.student_id)
+        return jsonify({
+            "message": "Login successful",
+            "name": student.name,
+            "student_id": student.student_id,
+            "access_token": access_token
+        }), 200
+    else:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+@app.route('/api/student/courses', methods=['GET'])
+@jwt_required()
+def get_student_courses():
+    student_id = get_jwt_identity()
+    # Fetch courses the student is enrolled in
+    # courses = db.session.query(Course).join(Session).filter(Session.student_id == student_id).distinct().all()
+    # Get normoral courses.
+    courses = Course.query.all()
+    return jsonify([
+        {"id": course.course_id, "name": course.course_name}
+        for course in courses
+    ]), 200
+
+@app.route('/api/student/start_session', methods=['POST'])
+@jwt_required()
+def start_student_session():
     try:
+        student_id = get_jwt_identity()
         data = request.json
-        image_data = base64.b64decode(data['image'].split(',')[1])
-        image = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
-        
-        face_embedding = face_recognition.get_face_embedding(image)
-        if face_embedding is None:
+        course_id = data.get('course_id')
+        image_data = data.get('image')
+
+        if not course_id or not image_data:
+            return jsonify({"error": "Missing course_id or image data"}), 400
+
+        # Get current day and time in the correct time zone
+        local_tz = timezone('Africa/Nairobi')  # Replace with your actual timezone
+        current_datetime = datetime.now(local_tz)
+        current_day = current_datetime.strftime('%A')
+
+        # Check timetable
+        timetable_entry = Timetable.query.filter_by(
+            course_id=course_id,
+            day_of_week=current_day
+        ).first()
+
+        if not timetable_entry:
+            return jsonify({"error": "No class scheduled for this course today"}), 400
+
+        # Convert naive time to aware datetime
+        start_time = local_tz.localize(datetime.combine(current_datetime.date(), timetable_entry.start_time))
+        end_time = local_tz.localize(datetime.combine(current_datetime.date(), timetable_entry.end_time))
+
+        if end_time < start_time:  # Course spans midnight
+            end_time += timedelta(days=1)
+
+        if not (start_time <= current_datetime <= end_time):
+            return jsonify({"error": "No class scheduled at this time"}), 400
+
+        # Decode and process the image
+        image_data = base64.b64decode(image_data.split(',')[1])
+        nparr = np.frombuffer(image_data, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        logger.info(f"Received image shape: {image.shape}")
+
+        faces = face_recognition.detect_faces(image)
+        logger.info(f"Detected faces: {len(faces)}")
+
+        if not faces:
+            # Save the problematic image for debugging
+            cv2.imwrite('debug_image.jpg', image)
             return jsonify({"error": "No face detected in the image"}), 400
-        
-        students = Student.query.all()
-        for student in students:
-            if face_recognition.recognize_face(face_embedding, student.face_encodings):
-                session = Session(student_id=student.student_id, course_id=data['course_id'])
-                db.session.add(session)
-                db.session.commit()
 
-                qr_data = f"http://localhost:3000/end-session/{session.session_id}"
-                qr_code = generate_qr_code(qr_data)
+        aligned_face = face_recognition.align_face(image, faces[0])
+        logger.info(f"Aligned face shape: {aligned_face.shape}")
 
-                return jsonify({
-                    "message": "Login successful",
-                    "student_id": student.student_id,
-                    "session_id": session.session_id,
-                    "qr_code": qr_code
-                }), 200
+        face_embedding = face_recognition.get_face_embedding(aligned_face)
+        if face_embedding is None:
+            return jsonify({"error": "Failed to get face embedding"}), 400
         
-        return jsonify({"error": "No matching student found"}), 401
+        # Verify the face matches the student
+        student = Student.query.get(student_id)
+        if not face_recognition.recognize_face(face_embedding, student.face_encodings):
+            return jsonify({"error": "Face does not match the student's record"}), 401
+
+        # Start the session
+        session = Session(student_id=student_id, course_id=course_id)
+        db.session.add(session)
+        db.session.commit()
+
+        # Generate QR code
+        qr_data = f"http://localhost:3000/end-session/{session.session_id}"
+        qr_code = generate_qr_code(qr_data)
+
+        return jsonify({
+            "message": "Session started successfully",
+            "session_id": session.session_id,
+            "qr_code": qr_code
+        }), 200
+
     except Exception as e:
-        logger.error(f"Error during student login: {e}")
-        return jsonify({"error": "Login failed"}), 500
-
+        logger.error(f"Error starting session: {e}", exc_info=True)
+        return jsonify({"error": "Failed to start session"}), 500
+           
 @app.route('/api/student/end_session/<int:session_id>', methods=['POST'])
+@jwt_required()
 def end_student_session(session_id):
     try:
-        data = request.json
-        image_data = base64.b64decode(data['image'].split(',')[1])
-        image = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
-        
-        face_embedding = face_recognition.get_face_embedding(image)
-        if face_embedding is None:
-            return jsonify({"error": "No face detected in the image"}), 400
-        
+        student_id = get_jwt_identity()
         session = Session.query.get(session_id)
-        if not session or session.status != 'active':
-            return jsonify({"error": "Invalid session or session already ended"}), 400
         
-        student = Student.query.get(session.student_id)
-        if face_recognition.recognize_face(face_embedding, student.face_encodings):
-            session.end_time = datetime.utcnow()
-            session.status = 'ended'
-            db.session.commit()
-            return jsonify({"message": "Session ended successfully"}), 200
+        if not session or session.student_id != student_id:
+            return jsonify({"error": "Invalid session"}), 400
         
-        return jsonify({"error": "Face does not match the session's student"}), 401
+        if session.status != 'active':
+            return jsonify({"error": "Session already ended"}), 400
+        
+        session.end_time = datetime.utcnow()
+        session.status = 'ended'
+        db.session.commit()
+        
+        return jsonify({"message": "Session ended successfully"}), 200
     except Exception as e:
         logger.error(f"Error ending session: {e}")
         return jsonify({"error": "Failed to end session"}), 500
 
+
+@app.route('/api/student/dashboard', methods=['GET'])
+@jwt_required()
+def get_student_dashboard():
+    try:
+        student_id = get_jwt_identity()
+        
+        # Fetch active session
+        active_session = Session.query.filter_by(student_id=student_id, status='active').first()
+        active_session_data = None
+        if active_session:
+            course = Course.query.get(active_session.course_id)
+            lecturer = Lecturer.query.get(course.lecturer_id)
+            qr_data = f"http://localhost:3000/end-session/{active_session.session_id}"
+            qr_code = generate_qr_code(qr_data)
+            active_session_data = {
+                "session_id": active_session.session_id,
+                "course_name": course.course_name,
+                "lecturer_name": lecturer.name,
+                "start_time": active_session.start_time.isoformat(),
+                "end_time": (active_session.start_time + timedelta(hours=1, minutes=30)).isoformat(),
+                "qr_code": qr_code
+            }
+
+        # Fetch attendance stats for the past 30 days
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        attendance_stats = db.session.query(
+            func.date(Session.start_time).label('date'),
+            func.count(Session.session_id).label('count')
+        ).filter(
+            Session.student_id == student_id,
+            Session.start_time.between(start_date, end_date)
+        ).group_by(func.date(Session.start_time)
+        ).order_by(func.date(Session.start_time)).all()
+
+        # Fetch timetable for the current week
+        current_day = datetime.now().weekday()
+        week_start = datetime.now() - timedelta(days=current_day)
+        week_end = week_start + timedelta(days=6)
+
+        timetable = db.session.query(
+            Timetable.day_of_week,
+            Course.course_name,
+            Timetable.start_time,
+            Timetable.end_time,
+            Lecturer.name.label('lecturer_name')
+        ).join(Course, Course.course_id == Timetable.course_id
+        ).join(Lecturer, Lecturer.lecturer_id == Course.lecturer_id
+        ).filter(
+            case(
+                {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6},
+                value=Timetable.day_of_week
+            ).between(current_day, current_day + 6)
+        ).order_by(
+            case(
+                {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6},
+                value=Timetable.day_of_week
+            ),
+            Timetable.start_time
+        ).all()
+
+        # Group timetable by day
+        timetable_by_day = {}
+        for entry in timetable:
+            if entry.day_of_week not in timetable_by_day:
+                timetable_by_day[entry.day_of_week] = []
+            timetable_by_day[entry.day_of_week].append({
+                "course_name": entry.course_name,
+                "start_time": entry.start_time.strftime('%H:%M'),
+                "end_time": entry.end_time.strftime('%H:%M'),
+                "lecturer_name": entry.lecturer_name
+            })
+
+        # Calculate total attendance and courses
+        total_attendance = Session.query.filter_by(student_id=student_id).count()
+        total_courses = db.session.query(func.count(distinct(Session.course_id))).filter_by(student_id=student_id).scalar()
+
+        dashboard_data = {
+            "activeSession": active_session_data,
+            "attendanceStats": {
+                "labels": [stat.date.strftime('%Y-%m-%d') for stat in attendance_stats],
+                "datasets": [{
+                    "label": 'Attendance',
+                    "data": [stat.count for stat in attendance_stats],
+                    "borderColor": 'rgb(75, 192, 192)',
+                    "backgroundColor": 'rgba(75, 192, 192, 0.5)',
+                }]
+            },
+            "timetable": [
+                {"day": day, "courses": courses}
+                for day, courses in timetable_by_day.items()
+            ],
+            "totalAttendance": total_attendance,
+            "totalCourses": total_courses,
+            "currentDay": datetime.now().strftime('%A'),
+            "currentTimestamp": datetime.now().isoformat()
+        }
+
+        return jsonify(dashboard_data), 200
+    except Exception as e:
+        logger.error(f"Error in student dashboard: {str(e)}")
+        return jsonify({"error": "Failed to fetch student dashboard data"}), 500
+
+# Other routes and functions remain the same
+
+   
+@app.route('/api/timetable/<int:course_id>', methods=['GET'])
+@jwt_required()
+def get_course_timetable(course_id):
+    timetable_entries = Timetable.query.filter_by(course_id=course_id).all()
+    
+    timetable = [{
+        "day": entry.day_of_week,
+        "start_time": entry.start_time.strftime('%H:%M'),
+        "end_time": entry.end_time.strftime('%H:%M')
+    } for entry in timetable_entries]
+    
+    return jsonify(timetable), 200
+     
 @app.route('/api/lecturer/login', methods=['POST'])
 def lecturer_login():
     try:
@@ -643,13 +874,75 @@ def get_student_history():
         logger.error(f"Error getting student history: {e}")
         return jsonify({"error": "Failed to get student history"}), 500
 
+@app.route('/api/student/active_session', methods=['GET'])
+@jwt_required()
+def get_active_session():
+    try:
+        student_id = get_jwt_identity()
+        active_session = Session.query.filter_by(student_id=student_id, status='active').first()
+        
+        if active_session:
+            course = Course.query.get(active_session.course_id)
+            qr_data = f"http://localhost:5173/end-session/{active_session.session_id}"
+            qr_code = generate_qr_code(qr_data)
+            
+            return jsonify({
+                "session_id": active_session.session_id,
+                "course_name": course.course_name,
+                "start_time": active_session.start_time.isoformat(),
+                "qr_code": qr_code
+            }), 200
+        else:
+            return jsonify(None), 200
+    except Exception as e:
+        logger.error(f"Error fetching active session: {e}")
+        return jsonify({"error": "Failed to fetch active session"}), 500
 
+from datetime import datetime, timedelta
+from pytz import timezone
+
+@app.route('/api/student/active_courses', methods=['GET'])
+@jwt_required()
+def get_active_courses():
+    try:
+        student_id = get_jwt_identity()
+       
+        # Get current day and time in the correct time zone
+        local_tz = timezone('Africa/Nairobi')  # Replace with your actual timezone
+        current_datetime = datetime.now(local_tz)
+        current_day = current_datetime.strftime('%A')
+
+        # Query for active courses
+        active_courses = db.session.query(Course).join(Timetable).filter(
+            Timetable.day_of_week == current_day
+        ).all()
+
+        # Filter courses manually to handle courses that span midnight
+        result = []
+        for course in active_courses:
+            timetable = course.timetable_entries[0]  # Assuming one timetable entry per course
+            
+            # Convert naive time to aware datetime
+            start_time = local_tz.localize(datetime.combine(current_datetime.date(), timetable.start_time))
+            end_time = local_tz.localize(datetime.combine(current_datetime.date(), timetable.end_time))
+            
+            if end_time < start_time:  # Course spans midnight
+                end_time += timedelta(days=1)
+            
+            if start_time <= current_datetime <= end_time:
+                result.append({"id": course.course_id, "name": course.course_name})
+
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error fetching active courses: {e}", exc_info=True)
+        return jsonify({"error": "Failed to fetch active courses"}), 500
+        
 # data entry into the timetable table
 @app.route('/api/generate_timetable/<int:lecturer_id>', methods=['GET'])
 def generate_timetable(lecturer_id):
     courses = [
-        {"course_name": "IST 2103 Information System Security and Risk Management", "day_of_week": "Monday", "start_time": "14:00", "end_time": "16:00"},
-        {"course_name": "IST 2103 Information System Security and Risk Management", "day_of_week": "Friday", "start_time": "14:00", "end_time": "16:00"},
+        {"course_name": "IST 1334 Basic Mathematics", "day_of_week": "Tuesday", "start_time": "10:00", "end_time": "01:00"},
+        {"course_name": "IST 2422 Emerging Trends in Information Technology", "day_of_week": "Tuesday", "start_time": "12:00", "end_time": "2:00"},
     ]
 
     for course in courses:
@@ -686,12 +979,11 @@ def end_expired_sessions():
             timetable = Timetable.query.filter_by(course_id=session.course_id).first()
             if timetable:
                 session_end_time = datetime.combine(session.start_time.date(), timetable.end_time)
-                # Add 1 hour and 30 minutes to the session end time
-                extended_end_time = session_end_time + timedelta(hours=1, minutes=30)
-                if now > extended_end_time:
-                    session.end_time = extended_end_time
+                if now > session_end_time:
+                    session.end_time = session_end_time
                     session.status = 'ended'
         db.session.commit()
+
 # Initialize and start the scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(end_expired_sessions, CronTrigger(minute='*/5'))
