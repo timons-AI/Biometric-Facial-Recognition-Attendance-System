@@ -6,6 +6,7 @@ import {
   Callout,
   FormGroup,
   InputGroup,
+  HTMLSelect,
 } from "@blueprintjs/core";
 import { registerStudent } from "../../services/api";
 import FaceCapture from "../../components/FaceCapture";
@@ -27,7 +28,9 @@ const RegisterStudentPage: React.FC = () => {
   const [images, setImages] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
+  const [academicYear, setAcademicYear] = useState("");
+  const [college, setCollege] = useState("");
+  const [group, setGroup] = useState("");
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setStudentData((prevData) => ({
@@ -72,6 +75,10 @@ const RegisterStudentPage: React.FC = () => {
     <Card className=" w-2/3 m-2">
       <h2>Register New Student</h2>
       {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      <Callout className=" m-2" intent={Intent.WARNING}>
+        Timetable assignment is currently under construction. The following
+        fields will be used for automatic timetable assignment in the future.
+      </Callout>
       <form onSubmit={handleSubmit}>
         <FormGroup
           label="Student ID"
@@ -129,6 +136,46 @@ const RegisterStudentPage: React.FC = () => {
         </FormGroup>
         <FormGroup label="Student Image" labelFor="image-capture">
           <FaceCapture onCapture={setImages} />
+        </FormGroup>
+        <FormGroup label="Academic Year" labelFor="academic-year-input">
+          <HTMLSelect
+            id="academic-year-input"
+            value={academicYear}
+            onChange={(e) => setAcademicYear(e.target.value)}
+            disabled
+          >
+            <option value="">Select Academic Year</option>
+            <option value="1">First Year</option>
+            <option value="2">Second Year</option>
+            <option value="3">Third Year</option>
+            <option value="4">Fourth Year</option>
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="College" labelFor="college-input">
+          <HTMLSelect
+            id="college-input"
+            value={college}
+            onChange={(e) => setCollege(e.target.value)}
+            disabled
+          >
+            <option value="">Select College</option>
+            <option value="engineering">College of Engineering</option>
+            <option value="science">College of Science</option>
+            <option value="business">College of Business</option>
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Group" labelFor="group-input">
+          <HTMLSelect
+            id="group-input"
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            disabled
+          >
+            <option value="">Select Group</option>
+            <option value="A">Group A</option>
+            <option value="B">Group B</option>
+            <option value="C">Group C</option>
+          </HTMLSelect>
         </FormGroup>
         <Button
           type="submit"

@@ -1,3 +1,5 @@
+// src/pages/admin/AdminRegistration.tsx
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,72 +8,81 @@ import {
   InputGroup,
   Button,
   Intent,
-  H2,
+  Callout,
 } from "@blueprintjs/core";
-import api from "../../services/api";
+import { registerAdmin } from "../../services/api";
 
-const AdminRegister: React.FC = () => {
-  const [password, setPassword] = useState("");
+const AdminRegistration: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    if (!name || !email || !password) {
+      setError("All fields are required");
+      return;
+    }
+
     try {
-      await api.post("/admin/register", {
-        password,
-        name,
-        email,
-      });
-      alert("Administrator registered successfully!");
-      navigate("/admin/login");
+      await registerAdmin(name, email, password);
+      setSuccess("Admin registered successfully");
+      // Optionally, redirect to admin dashboard or login page
+      setTimeout(() => navigate("/admin/dashboard"), 2000);
     } catch (error) {
-      console.error("Registration failed:", error);
-      alert("Failed to register administrator. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setError(error instanceof Error ? error.message : "Registration failed");
     }
   };
 
   return (
-    <Card elevation={2}>
-      <H2>Register Administrator</H2>
-      <form onSubmit={handleRegister}>
-        <FormGroup label="Name" labelFor="name-input">
+    <Card elevation={2} className="admin-registration">
+      <h2>Register New Admin</h2>
+      {error && <Callout intent={Intent.DANGER}>{error}</Callout>}
+      {success && <Callout intent={Intent.SUCCESS}>{success}</Callout>}
+      <form onSubmit={handleSubmit}>
+        <FormGroup label="Name" labelFor="name-input" labelInfo="(required)">
           <InputGroup
             id="name-input"
+            placeholder="Enter full name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
         </FormGroup>
-        <FormGroup label="Email" labelFor="email-input">
+        <FormGroup label="Email" labelFor="email-input" labelInfo="(required)">
           <InputGroup
             id="email-input"
             type="email"
+            placeholder="Enter email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </FormGroup>
-        <FormGroup label="Password" labelFor="password-input">
+        <FormGroup
+          label="Password"
+          labelFor="password-input"
+          labelInfo="(required)"
+        >
           <InputGroup
             id="password-input"
             type="password"
+            placeholder="Enter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </FormGroup>
-        <Button type="submit" intent={Intent.PRIMARY} loading={isLoading}>
-          Register
-        </Button>
+        <Button type="submit" intent={Intent.PRIMARY} text="Register Admin" />
       </form>
     </Card>
   );
 };
 
-export default AdminRegister;
+export default AdminRegistration;

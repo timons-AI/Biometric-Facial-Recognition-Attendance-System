@@ -1,175 +1,181 @@
-import React, { memo } from "react";
-import { useAtom } from "jotai";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  Navbar,
   Button,
+  Navbar,
   Alignment,
   Menu,
   MenuItem,
   Popover,
   Position,
 } from "@blueprintjs/core";
-import { userAtom } from "../store/auth";
-import { logout } from "../services/auth";
+import { useAtom } from "jotai";
+import { userAtom, isAuthenticatedAtom } from "../store/auth";
+import { showToast } from "./Toaster";
 
-const AppNavbar: React.FC = memo(() => {
+const AppNavbar: React.FC = () => {
   const [user, setUser] = useAtom(userAtom);
+  const [, setIsAuthenticated] = useAtom(isAuthenticatedAtom);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem("token");
     setUser(null);
-    navigate("/");
+    setIsAuthenticated(false);
+    showToast("Logged out successfully", "success");
+    navigate("/login");
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const renderMenu = () => {
+    if (!user) return undefined;
+    // console.log(user);
 
-  const renderLoginMenu = () => (
-    <Popover
-      content={
-        <Menu>
-          <MenuItem
-            icon="user"
-            text="Student Login"
-            onClick={() => navigate("/student/login")}
-          />
-          <MenuItem
-            icon="user"
-            text="Lecturer Login"
-            onClick={() => navigate("/lecturer/login")}
-          />
-          <MenuItem
-            icon="key"
-            text="Admin Login"
-            onClick={() => navigate("/admin/login")}
-          />
-        </Menu>
-      }
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button icon="log-in" text="Login" rightIcon="caret-down" />
-    </Popover>
-  );
-
-  const renderUserMenu = () => (
-    <Popover
-      content={
-        <Menu>
-          <MenuItem
-            icon="dashboard"
-            text="Dashboard"
-            onClick={() => navigate(`/${user?.role}/dashboard`)}
-          />
-          {user?.role === "admin" && (
-            <>
-              <MenuItem
-                icon="new-person"
-                text="Register Admin"
-                onClick={() => navigate("/admin/register")}
-              />
-              <MenuItem
-                icon="new-object"
-                text="Add Course"
-                onClick={() => navigate("/admin/add-course")}
-              />
-            </>
-          )}
-          {user?.role === "lecturer" && (
+    let menuItems;
+    switch (user.role) {
+      case "student":
+        menuItems = (
+          <Menu>
             <MenuItem
-              icon="timeline-events"
-              text="Manage Sessions"
-              onClick={() => navigate("/lecturer/manage-sessions")}
+              icon="dashboard"
+              text="Dashboard"
+              onClick={() => navigate("/student/dashboard")}
             />
-          )}
-          {user?.role === "student" && (
-            <>
-              <MenuItem
-                icon="play"
-                text="Session"
-                onClick={() => navigate("/student/start-session")}
-              />
-              <MenuItem
-                icon="history"
-                text="Attendance History"
-                onClick={() => navigate("/student/attendance-history")}
-              />
-            </>
-          )}
-          <MenuItem icon="log-out" text="Logout" onClick={handleLogout} />
-        </Menu>
-      }
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button
-        icon="user"
-        minimal
-        intent="none"
-        text={user?.name}
-        rightIcon="caret-down"
-      />
-    </Popover>
-  );
+            <MenuItem
+              icon="calendar"
+              text="Schedule"
+              onClick={() => navigate("/student/schedule")}
+            />
+            <MenuItem
+              icon="chart"
+              text="Attendance Report"
+              onClick={() => navigate("/student/attendance")}
+            />
+          </Menu>
+        );
+        break;
+      case "lecturer":
+        menuItems = (
+          <Menu>
+            <MenuItem
+              icon="dashboard"
+              text="Dashboard"
+              onClick={() => navigate("/lecturer/dashboard")}
+            />
+            <MenuItem
+              icon="people"
+              text="My Courses"
+              onClick={() => navigate("/lecturer/courses")}
+            />
+            <MenuItem
+              icon="take-action"
+              text="Mark Attendance"
+              onClick={() => navigate("/lecturer/mark-attendance")}
+            />
+          </Menu>
+        );
+        break;
+      case "admin":
+        menuItems = (
+          <Menu>
+            <MenuItem
+              icon="dashboard"
+              text="Dashboard"
+              onClick={() => navigate("/admin/dashboard")}
+            />
+            <MenuItem
+              icon="new-person"
+              text="Register User"
+              onClick={() => navigate("/admin/register")}
+            />
+            <MenuItem
+              icon="confirm"
+              text="Approve Students"
+              onClick={() => navigate("/admin/approve-students")}
+            />
+            <MenuItem
+              icon="new-person"
+              text="Register Admin"
+              onClick={() => navigate("/admin/register-admin")}
+            />
+            <MenuItem
+              icon="time"
+              text="Timetable Management"
+              onClick={() => navigate("/admin/timetable-management")}
+            />
+          </Menu>
+        );
+        break;
+      default:
+        menuItems = undefined;
+    }
 
-  const renderActionsMenu = () => (
-    <Popover
-      content={
-        <Menu>
-          <MenuItem
-            icon="new-person"
-            text="Register Student"
-            onClick={() => navigate("/admin/register-student")}
-          />
-          <MenuItem
-            icon="new-person"
-            text="Register Lecturer"
-            onClick={() => navigate("/admin/register-lecturer")}
-          />
-        </Menu>
-      }
-      position={Position.BOTTOM_RIGHT}
-    >
-      <Button
-        icon="more"
-        // outlined
-        minimal
-        intent="warning"
-        rightIcon="caret-down"
-      />
-    </Popover>
-  );
+    return menuItems ? (
+      <Popover content={menuItems} position={Position.BOTTOM_RIGHT}>
+        <Button
+          icon="user"
+          rightIcon="caret-down"
+          text={`${user.name} (${user.role})`}
+          className="ml-2"
+        />
+      </Popover>
+    ) : null;
+  };
 
   return (
-    <Navbar>
-      <Navbar.Group align={Alignment.LEFT}>
-        <Navbar.Heading>Attendance System</Navbar.Heading>
+    <Navbar className="bp3-dark">
+      <Navbar.Group align={Alignment.LEFT} className="flex items-center">
+        <Navbar.Heading className="text-lg font-bold">
+          Attendance System
+        </Navbar.Heading>
         <Navbar.Divider />
         <Button
           icon="home"
           text="Home"
-          intent={isActive("/") ? "primary" : "none"}
           minimal
           onClick={() => navigate("/")}
+          className="bp3-minimal"
         />
-        {user && (
-          <Button
-            intent={isActive(`/${user.role}/dashboard`) ? "primary" : "none"}
-            icon="dashboard"
-            text="Dashboard"
-            minimal
-            onClick={() => navigate(`/${user.role}/dashboard`)}
-          />
+        <Button
+          icon="camera"
+          text="Student Portal"
+          minimal
+          onClick={() => navigate("/student-portal")}
+          className="bp3-minimal"
+        />
+      </Navbar.Group>
+      <Navbar.Group align={Alignment.RIGHT} className="flex items-center">
+        {user ? (
+          <>
+            {renderMenu()}
+            <Button
+              icon="log-out"
+              text="Logout"
+              minimal
+              onClick={handleLogout}
+              className="bp3-minimal"
+            />
+          </>
+        ) : (
+          <>
+            <Button
+              icon="log-in"
+              text="Login"
+              minimal
+              onClick={() => navigate("/login")}
+              className="bp3-minimal"
+            />
+            <Button
+              icon="new-person"
+              text="Register"
+              minimal
+              onClick={() => navigate("/register")}
+              className="bp3-minimal"
+            />
+          </>
         )}
-      </Navbar.Group>
-      <Navbar.Group align={Alignment.RIGHT}>
-        {user ? renderUserMenu() : renderLoginMenu()}
-      </Navbar.Group>
-      <Navbar.Group align={Alignment.RIGHT}>
-        {user && user.role === "admin" && renderActionsMenu()}
       </Navbar.Group>
     </Navbar>
   );
-});
+};
 
 export default AppNavbar;

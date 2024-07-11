@@ -28,7 +28,7 @@ from claude_face_recognition import FaceRecognition
 
 app = Flask(__name__)
 # CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173", "allow_headers": ["Content-Type", "Authorization"]}})
+CORS(app, resources={r"/api/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"]}})
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://laravel_user:laravel_user@localhost/attendance_system_v1'
@@ -58,6 +58,21 @@ if not os.path.exists(app.config['TEMP_IMAGE_FOLDER']):
     os.makedirs(app.config['TEMP_IMAGE_FOLDER'])
 
 # Models
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False)  # 'student', 'lecturer', or 'admin'
+    face_encodings = db.Column(db.JSON, nullable=True)  # For students only
+    status = db.Column(db.String(20), default='pending')  # For students: 'pending', 'approved', 'rejected'
+
+    def __init__(self, name, email, password, role):
+        self.name = name
+        self.email = email
+        self.password = generate_password_hash(password)
+        self.role = role
 class Student(db.Model):
     __tablename__ = 'students'
     student_id = db.Column(db.String(50), primary_key=True)
@@ -65,7 +80,9 @@ class Student(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     face_encodings = db.Column(db.JSON, nullable=False)
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'approved', 'rejected'
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+
 class Lecturer(db.Model):
     __tablename__ = 'lecturers'
     lecturer_id = db.Column(db.Integer, primary_key=True)
@@ -154,27 +171,196 @@ def generate_qr_code(data):
     return base64.b64encode(buffered.getvalue()).decode()
 
 # Routes
-@app.route('/api/admin/register', methods=['POST'])
-def register_admin():
-    try:
-        data = request.json
-        errors = lecturer_schema.validate(data)
-        if errors:
-            return jsonify({"error": errors}), 400
+# Initialize FaceRecognition
 
-        hashed_password = generate_password_hash(data['password'])
-        new_admin = Admin(
-            name=data['name'],
-            email=data['email'],
-            password=hashed_password
-        )
-        db.session.add(new_admin)
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    user = User.query.filter_by(email=email).first()
+    if user and check_password_hash(user.password, password):
+        access_token = create_access_token(identity=user.id)
+        return jsonify({
+            'id': user.id,
+            'name': user.name,
+            'role': user.role,
+            'access_token': access_token
+        }), 200
+    else:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/api/register/lecturer', methods=['POST'])
+@jwt_required()
+def register_lecturer():
+    if get_jwt_identity()['role'] != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not all([name, email, password]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 400
+
+    new_lecturer = User(name=name, email=email, password=password, role='lecturer')
+    db.session.add(new_lecturer)
+    db.session.commit()
+
+    return jsonify({"message": "Lecturer registered successfully"}), 201
+
+@app.route('/api/register/admin', methods=['POST'])
+# @jwt_required()
+def register_admin():
+    # if get_jwt_identity()['role'] != 'admin':
+    #     return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not all([name, email, password]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 400
+
+    new_admin = User(name=name, email=email, password=password, role='admin')
+    db.session.add(new_admin)
+    db.session.commit()
+
+    return jsonify({"message": "Admin registered successfully"}), 201
+
+@app.route('/api/admin/approve_student/<int:user_id>', methods=['POST'])
+@jwt_required()
+def approve_student(user_id):
+    if get_jwt_identity()['role'] != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    student = User.query.filter_by(id=user_id, role='student').first()
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+
+    student.status = 'approved'
+    db.session.commit()
+
+    return jsonify({"message": "Student approved successfully"}), 200
+
+@app.route('/api/admin/reject_student/<int:user_id>', methods=['POST'])
+@jwt_required()
+def reject_student(user_id):
+    if get_jwt_identity()['role'] != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    student = User.query.filter_by(id=user_id, role='student').first()
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+
+    student.status = 'rejected'
+    db.session.commit()
+
+    return jsonify({"message": "Student rejected successfully"}), 200
+
+@app.route('/api/admin/pending_students', methods=['GET'])
+@jwt_required()
+def get_pending_students():
+    if get_jwt_identity()['role'] != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    pending_students = User.query.filter_by(role='student', status='pending').all()
+    students_data = [{
+        'id': student.id,
+        'name': student.name,
+        'email': student.email
+    } for student in pending_students]
+
+    return jsonify(students_data), 200
+
+
+@app.route('/api/student/face-login', methods=['POST'])
+def student_face_login():
+    try:
+        image_data = request.json['image']
+        image_data = base64.b64decode(image_data.split(',')[1])
+        nparr = np.frombuffer(image_data, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        faces = face_recognition.detect_faces(image)
+        if not faces:
+            return jsonify({"error": "No face detected in the image"}), 400
+
+        aligned_face = face_recognition.align_face(image, faces[0])
+        face_embedding = face_recognition.get_face_embedding(aligned_face)
+
+        if face_embedding is None:
+            return jsonify({"error": "Failed to get face embedding"}), 400
+
+        # Find matching student
+        students = Student.query.filter_by(status='approved').all()
+        for student in students:
+            if face_recognition.recognize_face(face_embedding, student.face_encodings):
+                access_token = create_access_token(identity=student.student_id)
+                return jsonify({
+                    "message": "Login successful",
+                    "student_id": student.student_id,
+                    "name": student.name,
+                    "access_token": access_token
+                }), 200
+
+        return jsonify({"error": "No matching student found"}), 401
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/students-for-approval', methods=['GET'])
+@jwt_required()
+def get_students_for_approval():
+    try:
+        pending_students = User.query.filter_by(status='pending').all()
+        return jsonify([
+            {
+                "student_id": student.student_id,
+                "name": student.name,
+                "email": student.email
+            } for student in pending_students
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lecturer/end-all-sessions', methods=['POST'])
+@jwt_required()
+def end_all_sessions():
+    try:
+        lecturer_id = get_jwt_identity()
+        # End all active sessions for the lecturer's courses
+        active_sessions = Session.query.join(Course).filter(
+            Course.lecturer_id == lecturer_id,
+            Session.status == 'active'
+        ).all()
+        
+        for session in active_sessions:
+            session.status = 'ended'
+            session.end_time = db.func.now()
+        
         db.session.commit()
-        return jsonify({"message": "Admin registered successfully"}), 201
+
+        # Generate QR code data (you may want to customize this)
+        qr_code_data = f"http://your-frontend-url/end-sessions/{lecturer_id}"
+
+        return jsonify({
+            "message": f"Ended {len(active_sessions)} active sessions",
+            "qrCode": qr_code_data
+        }), 200
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error registering admin: {e}")
-        return jsonify({"error": "Failed to register admin"}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
@@ -202,189 +388,101 @@ def admin_login():
         logger.error(f"Error during admin login: {e}")
         return jsonify({"error": "Login failed"}), 500
 
-@app.route('/api/admin/register_student', methods=['POST'])
+
+@app.route('/api/dashboard', methods=['GET'])
 @jwt_required()
-def register_student():
-    try:
-        data = request.form
-        files = request.files.getlist('files')
+def get_dashboard():
+    current_user = get_jwt_identity()
+    user = User.query.get(current_user)
+    return jsonify({
+        'name': user.name,
+        'role': user.role
+    })
 
-        # Validate input data
-        required_fields = ['student_id', 'name', 'email', 'password']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
+@app.route('/api/student/dashboard', methods=['GET'])
+@jwt_required()
+def get_student_dashboard():
+    current_user = get_jwt_identity()
+    student = User.query.filter_by(id=current_user, role='student').first()
+    if not student:
+        return jsonify({"error": "Unauthorized"}), 403
 
-        # Validate files
-        if not files:
-            return jsonify({"error": "No files provided"}), 400
+    courses = Course.query.join(Enrollment).filter(Enrollment.student_id == student.id).all()
+    attendance = Attendance.query.filter_by(student_id=student.id).all()
 
-        face_embeddings = []
-        face_recognition = FaceRecognition.get_instance()
+    return jsonify({
+        'name': student.name,
+        'role': 'student',
+        'courses': [{'id': c.id, 'name': c.name} for c in courses],
+        'attendanceStats': {
+            'total': len(attendance),
+            'present': sum(1 for a in attendance if a.status == 'present'),
+            'absent': sum(1 for a in attendance if a.status == 'absent')
+        },
+        'upcomingClasses': [
+            {
+                'courseName': c.name,
+                'startTime': c.start_time.isoformat(),
+                'endTime': c.end_time.isoformat()
+            } for c in courses if c.upcoming()  # Implement the 'upcoming' method in your Course model
+        ]
+    })
 
-        for file in files:
-            if file and allowed_file(file.filename):
-                try:
-                    filename = secure_filename(file.filename)
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(filepath)
+@app.route('/api/lecturer/dashboard', methods=['GET'])
+@jwt_required()
+def get_lecturer_dashboard():
+    current_user = get_jwt_identity()
+    lecturer = User.query.filter_by(id=current_user, role='lecturer').first()
+    if not lecturer:
+        return jsonify({"error": "Unauthorized"}), 403
 
-                    logger.info(f"Processing image: {filename}")
-                    image = cv2.imread(filepath)
-                    
-                    if image is None:
-                        logger.warning(f"Could not read image: {filename}")
-                        continue
+    courses = Course.query.filter_by(lecturer_id=lecturer.id).all()
 
-                    faces = face_recognition.detect_faces(image)
-                    
-                    if not faces:
-                        logger.warning(f"No faces detected in image: {filename}")
-                        continue
-
-                    for face in faces:
-                        try:
-                            aligned_face = face_recognition.align_face(image, face)
-                            face_embedding = face_recognition.get_face_embedding(aligned_face)
-                            
-                            if face_embedding is not None and len(face_embedding) > 0:
-                                face_embeddings.append(face_embedding.tolist())
-                                logger.info(f"Face embedding added. Total embeddings: {len(face_embeddings)}")
-                            else:
-                                logger.warning(f"Invalid face embedding for face in {filename}")
-                        except Exception as e:
-                            logger.error(f"Error processing face in {filename}: {str(e)}")
-
-                except Exception as e:
-                    logger.error(f"Error processing file {filename}: {str(e)}")
-                finally:
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-
-        if not face_embeddings:
-            return jsonify({"error": "No valid faces found in the uploaded images"}), 400
-
-        # Create new student
-        new_student = Student(
-            student_id=data['student_id'],
-            name=data['name'],
-            email=data['email'],
-            password=generate_password_hash(data['password']),
-            face_encodings=face_embeddings
-        )
-
-        db.session.add(new_student)
-        db.session.commit()
-
-        return jsonify({"message": "Student registered successfully"}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error registering student: {str(e)}")
-        return jsonify({"error": "An unexpected error occurred while registering the student"}), 500
+    return jsonify({
+        'name': lecturer.name,
+        'role': 'lecturer',
+        'courses': [{'id': c.id, 'name': c.name} for c in courses],
+        'totalStudents': sum(c.students.count() for c in courses),
+        'upcomingClasses': [
+            {
+                'courseName': c.name,
+                'startTime': c.start_time.isoformat(),
+                'endTime': c.end_time.isoformat(),
+                'totalStudents': c.students.count()
+            } for c in courses if c.upcoming()  # Implement the 'upcoming' method in your Course model
+        ],
+        'attendanceStats': [
+            {
+                'courseName': c.name,
+                'attendancePercentage': c.get_attendance_percentage()  # Implement this method in your Course model
+            } for c in courses
+        ]
+    })
 
 @app.route('/api/admin/dashboard', methods=['GET'])
 @jwt_required()
 def get_admin_dashboard():
-    try:
-        # Fetch total counts
-        total_students = Student.query.count()
-        total_lecturers = Lecturer.query.count()
-        total_courses = Course.query.count()
+    current_user = get_jwt_identity()
+    admin = User.query.filter_by(id=current_user, role='admin').first()
+    if not admin:
+        return jsonify({"error": "Unauthorized"}), 403
 
-        # Fetch recent students
-        recent_students = db.session.query(
-            Student,
-            func.count(Session.session_id).label('total_sessions')
-        ).outerjoin(Session).group_by(Student).order_by(Student.created_at.desc()).limit(5).all()
+    return jsonify({
+        'name': admin.name,
+        'role': 'admin',
+        'totalStudents': User.query.filter_by(role='student').count(),
+        'totalLecturers': User.query.filter_by(role='lecturer').count(),
+        'totalCourses': Course.query.count(),
+        'recentRegistrations': [
+            {
+                'name': u.name,
+                'role': u.role,
+                'date': u.created_at.isoformat()
+            } for u in User.query.order_by(User.created_at.desc()).limit(5)
+        ],
+        'pendingApprovals': User.query.filter_by(role='student', status='pending').count()
+    })
 
-        # Fetch top lecturers
-        top_lecturers = db.session.query(
-            Lecturer,
-            func.count(Course.course_id).label('courses_count')
-        ).outerjoin(Course).group_by(Lecturer).order_by(func.count(Course.course_id).desc()).limit(5).all()
-
-        # Fetch popular courses
-        popular_courses = db.session.query(
-            Course,
-            Lecturer.name.label('lecturer_name'),
-            func.count(distinct(Session.student_id)).label('students_count')
-        ).join(Lecturer).outerjoin(Session).group_by(Course).order_by(func.count(distinct(Session.student_id)).desc()).limit(5).all()
-
-        # Fetch attendance statistics for the past week
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
-        attendance_stats = db.session.query(
-            func.date(Session.start_time).label('date'),
-            func.count(Session.session_id).label('count')
-        ).filter(Session.start_time.between(start_date, end_date)
-        ).group_by(func.date(Session.start_time)
-        ).order_by(func.date(Session.start_time)).all()
-
-        # Fetch course distribution
-        course_distribution = db.session.query(
-            Course.course_name,
-            func.count(distinct(Session.student_id)).label('students_count')
-        ).outerjoin(Session).group_by(Course).order_by(func.count(distinct(Session.student_id)).desc()).limit(5).all()
-
-        dashboard_data = {
-            'totalStudents': total_students,
-            'totalLecturers': total_lecturers,
-            'totalCourses': total_courses,
-            'recentStudents': [
-                {
-                    'student_id': student.Student.student_id,
-                    'name': student.Student.name,
-                    'email': student.Student.email,
-                    'total_sessions': student.total_sessions
-                } for student in recent_students
-            ],
-            'topLecturers': [
-                {
-                    'lecturer_id': lecturer.Lecturer.lecturer_id,
-                    'name': lecturer.Lecturer.name,
-                    'email': lecturer.Lecturer.email,
-                    'courses_count': lecturer.courses_count
-                } for lecturer in top_lecturers
-            ],
-            'popularCourses': [
-                {
-                    'course_id': course.Course.course_id,
-                    'course_name': course.Course.course_name,
-                    'lecturer_name': course.lecturer_name,
-                    'students_count': course.students_count
-                } for course in popular_courses
-            ],
-            'attendanceStats': {
-                'labels': [stat.date.strftime('%Y-%m-%d') for stat in attendance_stats],
-                'datasets': [{
-                    'label': 'Daily Attendance',
-                    'data': [stat.count for stat in attendance_stats],
-                    'backgroundColor': 'rgba(75, 192, 192, 0.6)',
-                }]
-            },
-            'courseDistribution': {
-                'labels': [course.course_name for course in course_distribution],
-                'datasets': [{
-                    'label': 'Students per Course',
-                    'data': [course.students_count for course in course_distribution],
-                    'backgroundColor': [
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(255, 206, 86, 0.6)',
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(153, 102, 255, 0.6)',
-                    ],
-                }]
-            }
-        }
-
-        return jsonify(dashboard_data), 200
-    except Exception as e:
-        print(f"Error in admin dashboard: {str(e)}")
-        return jsonify({"error": "Failed to fetch admin dashboard data"}), 500
-
-# Add these new endpoints for the admin actions
 
 @app.route('/api/admin/register_lecturer', methods=['POST'])
 @jwt_required()
@@ -594,112 +692,6 @@ def end_student_session(session_id):
         logger.error(f"Error ending session: {e}")
         return jsonify({"error": "Failed to end session"}), 500
 
-
-@app.route('/api/student/dashboard', methods=['GET'])
-@jwt_required()
-def get_student_dashboard():
-    try:
-        student_id = get_jwt_identity()
-        
-        # Fetch active session
-        active_session = Session.query.filter_by(student_id=student_id, status='active').first()
-        active_session_data = None
-        if active_session:
-            course = Course.query.get(active_session.course_id)
-            lecturer = Lecturer.query.get(course.lecturer_id)
-            qr_data = f"http://localhost:3000/end-session/{active_session.session_id}"
-            qr_code = generate_qr_code(qr_data)
-            active_session_data = {
-                "session_id": active_session.session_id,
-                "course_name": course.course_name,
-                "lecturer_name": lecturer.name,
-                "start_time": active_session.start_time.isoformat(),
-                "end_time": (active_session.start_time + timedelta(hours=1, minutes=30)).isoformat(),
-                "qr_code": qr_code
-            }
-
-        # Fetch attendance stats for the past 30 days
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
-        attendance_stats = db.session.query(
-            func.date(Session.start_time).label('date'),
-            func.count(Session.session_id).label('count')
-        ).filter(
-            Session.student_id == student_id,
-            Session.start_time.between(start_date, end_date)
-        ).group_by(func.date(Session.start_time)
-        ).order_by(func.date(Session.start_time)).all()
-
-        # Fetch timetable for the current week
-        current_day = datetime.now().weekday()
-        week_start = datetime.now() - timedelta(days=current_day)
-        week_end = week_start + timedelta(days=6)
-
-        timetable = db.session.query(
-            Timetable.day_of_week,
-            Course.course_name,
-            Timetable.start_time,
-            Timetable.end_time,
-            Lecturer.name.label('lecturer_name')
-        ).join(Course, Course.course_id == Timetable.course_id
-        ).join(Lecturer, Lecturer.lecturer_id == Course.lecturer_id
-        ).filter(
-            case(
-                {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6},
-                value=Timetable.day_of_week
-            ).between(current_day, current_day + 6)
-        ).order_by(
-            case(
-                {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6},
-                value=Timetable.day_of_week
-            ),
-            Timetable.start_time
-        ).all()
-
-        # Group timetable by day
-        timetable_by_day = {}
-        for entry in timetable:
-            if entry.day_of_week not in timetable_by_day:
-                timetable_by_day[entry.day_of_week] = []
-            timetable_by_day[entry.day_of_week].append({
-                "course_name": entry.course_name,
-                "start_time": entry.start_time.strftime('%H:%M'),
-                "end_time": entry.end_time.strftime('%H:%M'),
-                "lecturer_name": entry.lecturer_name
-            })
-
-        # Calculate total attendance and courses
-        total_attendance = Session.query.filter_by(student_id=student_id).count()
-        total_courses = db.session.query(func.count(distinct(Session.course_id))).filter_by(student_id=student_id).scalar()
-
-        dashboard_data = {
-            "activeSession": active_session_data,
-            "attendanceStats": {
-                "labels": [stat.date.strftime('%Y-%m-%d') for stat in attendance_stats],
-                "datasets": [{
-                    "label": 'Attendance',
-                    "data": [stat.count for stat in attendance_stats],
-                    "borderColor": 'rgb(75, 192, 192)',
-                    "backgroundColor": 'rgba(75, 192, 192, 0.5)',
-                }]
-            },
-            "timetable": [
-                {"day": day, "courses": courses}
-                for day, courses in timetable_by_day.items()
-            ],
-            "totalAttendance": total_attendance,
-            "totalCourses": total_courses,
-            "currentDay": datetime.now().strftime('%A'),
-            "currentTimestamp": datetime.now().isoformat()
-        }
-
-        return jsonify(dashboard_data), 200
-    except Exception as e:
-        logger.error(f"Error in student dashboard: {str(e)}")
-        return jsonify({"error": "Failed to fetch student dashboard data"}), 500
-
-# Other routes and functions remain the same
-
    
 @app.route('/api/timetable/<int:course_id>', methods=['GET'])
 @jwt_required()
@@ -740,24 +732,6 @@ def lecturer_login():
         logger.error(f"Error during lecturer login: {e}")
         return jsonify({"error": "Login failed"}), 500
 
-@app.route('/api/lecturer/end_all_sessions', methods=['POST'])
-@jwt_required()
-def end_all_sessions():
-    try:
-        data = request.json
-        course_id = data['course_id']
-        
-        active_sessions = Session.query.filter_by(course_id=course_id, status='active').all()
-        for session in active_sessions:
-            session.end_time = datetime.utcnow()
-            session.status = 'ended'
-        
-        db.session.commit()
-        return jsonify({"message": f"Ended {len(active_sessions)} active sessions"}), 200
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error ending all sessions: {e}")
-        return jsonify({"error": "Failed to end sessions"}), 500
 @app.route('/api/lecturer/current_attendance', methods=['GET'])
 @jwt_required()
 def get_current_attendance():
@@ -971,23 +945,23 @@ def generate_timetable(lecturer_id):
     return jsonify({"message": "Timetable generated successfully"}), 201
 
 # Background job for ending expired sessions
-def end_expired_sessions():
-    with app.app_context():
-        now = datetime.utcnow()
-        active_sessions = Session.query.filter_by(status='active').all()
-        for session in active_sessions:
-            timetable = Timetable.query.filter_by(course_id=session.course_id).first()
-            if timetable:
-                session_end_time = datetime.combine(session.start_time.date(), timetable.end_time)
-                if now > session_end_time:
-                    session.end_time = session_end_time
-                    session.status = 'ended'
-        db.session.commit()
+# def end_expired_sessions():
+#     with app.app_context():
+#         now = datetime.utcnow()
+#         active_sessions = Session.query.filter_by(status='active').all()
+#         for session in active_sessions:
+#             timetable = Timetable.query.filter_by(course_id=session.course_id).first()
+#             if timetable:
+#                 session_end_time = datetime.combine(session.start_time.date(), timetable.end_time)
+#                 if now > session_end_time:
+#                     session.end_time = session_end_time
+#                     session.status = 'ended'
+#         db.session.commit()
 
 # Initialize and start the scheduler
-scheduler = BackgroundScheduler()
-scheduler.add_job(end_expired_sessions, CronTrigger(minute='*/5'))
-scheduler.start()
+# scheduler = BackgroundScheduler()
+# scheduler.add_job(end_expired_sessions, CronTrigger(minute='*/5'))
+# scheduler.start()
 
 if __name__ == '__main__':
     with app.app_context():

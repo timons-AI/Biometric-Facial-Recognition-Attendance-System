@@ -1,10 +1,15 @@
 import { atom } from "jotai";
+import { jwtDecode } from "jwt-decode";
 
-interface User {
+export interface User {
   id: string;
-  role: "student" | "lecturer" | "admin";
   name: string;
-  token: string;
+  email: string;
+  role: "student" | "lecturer" | "admin";
 }
 
-export const userAtom = atom<User | null>(null);
+const token = localStorage.getItem("token");
+const initialUser = token ? (jwtDecode(token) as User) : null;
+
+export const userAtom = atom<User | null>(initialUser);
+export const isAuthenticatedAtom = atom<boolean>(!!initialUser);

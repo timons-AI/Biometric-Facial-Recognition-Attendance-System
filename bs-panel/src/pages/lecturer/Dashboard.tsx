@@ -10,6 +10,7 @@ import {
   Callout,
   Section,
   SectionCard,
+  Dialog,
 } from "@blueprintjs/core";
 import { Cell, Column, Table2 } from "@blueprintjs/table";
 import { Bar } from "react-chartjs-2";
@@ -23,6 +24,8 @@ import {
   Legend,
 } from "chart.js";
 import { fetchTeacherDashboardData } from "../../services/api";
+import { QRCodeSVG } from "qrcode.react";
+import { endAllTeacherSessions } from "../../services/api";
 
 ChartJS.register(
   CategoryScale,
@@ -69,6 +72,18 @@ export interface TeacherDashboardData {
 }
 
 const TeacherDashboard: React.FC = () => {
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [endSessionsQRCode, setEndSessionsQRCode] = useState("");
+
+  const handleEndAllSessions = async () => {
+    try {
+      const qrCodeData = await endAllTeacherSessions();
+      setEndSessionsQRCode(qrCodeData);
+      setIsQRDialogOpen(true);
+    } catch (error) {
+      // Handle error
+    }
+  };
   const [data, setData] = useState<TeacherDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -203,6 +218,13 @@ const TeacherDashboard: React.FC = () => {
               /* Implement end all sessions logic */
             }}
           />
+          <Dialog
+            isOpen={isQRDialogOpen}
+            onClose={() => setIsQRDialogOpen(false)}
+            title="End All Sessions QR Code"
+          >
+            <QRCodeSVG value={endSessionsQRCode} />
+          </Dialog>
         </SectionCard>
       </Section>
     </div>

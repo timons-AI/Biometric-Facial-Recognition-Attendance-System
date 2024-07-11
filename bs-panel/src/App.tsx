@@ -1,128 +1,112 @@
-import React, { useEffect, useRef, lazy, Suspense } from "react";
+import React from "react";
 import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
   BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
 } from "react-router-dom";
 import { useAtom } from "jotai";
-import { userAtom } from "./store/auth";
+import { isAuthenticatedAtom, userAtom } from "./store/auth";
 import AppNavbar from "./components/Navbar";
-import { Spinner } from "@blueprintjs/core";
-import { useSessionCheck } from "./hooks/useSessionCheck";
-import StartSessionPage from "./pages/student/StartSession";
-
-const HomePage = lazy(() => import("./pages/HomePage"));
-const StudentLogin = lazy(() => import("./pages/student/Login"));
-const LecturerLogin = lazy(() => import("./pages/lecturer/Login"));
-const AdminLogin = lazy(() => import("./pages/admin/Login"));
-const AdminRegister = lazy(() => import("./pages/admin/Register"));
-const StudentDashboard = lazy(() => import("./pages/student/Dashboard"));
-const LecturerDashboard = lazy(() => import("./pages/lecturer/Dashboard"));
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
-const RegisterStudentPage = lazy(() => import("./pages/admin/RegisterStudent"));
-const RegisterLecturerPage = lazy(
-  () => import("./pages/admin/RegisterTeacher")
-);
+import RegistrationForm from "./components/RegsitrationForm";
+import LoginForm from "./components/LoginForm";
+import AdminApproval from "./components/AdminApproval";
+import StudentDashboard from "./components/StudentDashboard";
+import LecturerDashboard from "./components/LecturerDashboard";
+import AdminDashboard from "./components/AdminDashboard";
+import AdminRegistration from "./components/AdminRegistrationForm";
+import StudentViewPortal from "./components/StudentViewPortal";
+import PageNotFound from "./components/PageNotFound";
+import AdminTimetableManagement from "./components/AdminTimeTableMgt";
 
 const App: React.FC = () => {
-  const [user, setUser] = useAtom(userAtom);
-  useSessionCheck();
+  const [isAuthenticated] = useAtom(isAuthenticatedAtom);
+  const [user] = useAtom(userAtom);
 
   const PrivateRoute: React.FC<{
     element: React.ReactElement;
     allowedRoles: string[];
   }> = ({ element, allowedRoles }) => {
-    if (!user) {
-      return <Navigate to="/" />;
+    if (!isAuthenticated) {
+      return <Navigate to="/login" />;
     }
-    if (!allowedRoles.includes(user.role)) {
+    if (user && !allowedRoles.includes(user.role)) {
       return <Navigate to="/" />;
     }
     return element;
   };
 
   return (
-    // <Router>
-    <>
+    <Router>
       <AppNavbar />
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Suspense fallback={<Spinner />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/student/login" element={<StudentLogin />} />
-            <Route path="/lecturer/login" element={<LecturerLogin />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route
-              path="/student/start-session"
-              element={
-                <PrivateRoute
-                  element={<StartSessionPage />}
-                  allowedRoles={["student"]}
-                />
-              }
-            />
-            <Route
-              path="/student/dashboard"
-              element={
-                <PrivateRoute
-                  element={<StudentDashboard />}
-                  allowedRoles={["student"]}
-                />
-              }
-            />
-            <Route
-              path="/lecturer/dashboard"
-              element={
-                <PrivateRoute
-                  element={<LecturerDashboard />}
-                  allowedRoles={["lecturer"]}
-                />
-              }
-            />
-            <Route
-              path="/admin/register"
-              element={
-                <PrivateRoute
-                  element={<AdminRegister />}
-                  allowedRoles={["admin"]}
-                />
-              }
-            />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <PrivateRoute
-                  element={<AdminDashboard />}
-                  allowedRoles={["admin"]}
-                />
-              }
-            />
-            <Route
-              path="/admin/register-student"
-              element={
-                <PrivateRoute
-                  element={<RegisterStudentPage />}
-                  allowedRoles={["admin"]}
-                />
-              }
-            />
-            <Route
-              path="/admin/register-lecturer"
-              element={
-                <PrivateRoute
-                  element={<RegisterLecturerPage />}
-                  allowedRoles={["admin"]}
-                />
-              }
-            />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </Suspense>
+      <div className="container mx-auto mt-4">
+        <Routes>
+          <Route path="/register" element={<RegistrationForm />} />
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/student-portal" element={<StudentViewPortal />} />
+          <Route
+            path="/student/dashboard"
+            element={
+              <PrivateRoute
+                element={<StudentDashboard />}
+                allowedRoles={["student"]}
+              />
+            }
+          />
+          <Route
+            path="/lecturer/dashboard"
+            element={
+              <PrivateRoute
+                element={<LecturerDashboard />}
+                allowedRoles={["lecturer"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <PrivateRoute
+                element={<AdminDashboard />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/approve-students"
+            element={
+              <PrivateRoute
+                element={<AdminApproval />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          {/* <Route
+            path="/admin/register-admin"
+            element={
+              <PrivateRoute
+                element={<AdminRegistration />}
+                allowedRoles={["admin"]}
+              />
+            }
+          /> */}
+
+          <Route path="/admin/register-admin" element={<AdminRegistration />} />
+          <Route
+            path="/admin/timetable-management"
+            element={
+              <PrivateRoute
+                element={<AdminTimetableManagement />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* pages that don't exist */}
+          <Route path="*" element={<PageNotFound />} />
+        </Routes>
       </div>
-    </>
-    // </Router>
+    </Router>
   );
 };
 

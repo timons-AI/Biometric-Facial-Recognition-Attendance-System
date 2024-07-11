@@ -3,7 +3,7 @@ import numpy as np
 import time
 import logging
 from database import Database
-from face_recognition import FaceRecognition
+from claude_face_recognition import FaceRecognition
 from datetime import datetime, timedelta
 import pygame
 import threading

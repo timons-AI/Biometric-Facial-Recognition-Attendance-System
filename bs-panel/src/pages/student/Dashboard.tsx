@@ -11,7 +11,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import QRCode from "qrcode.react";
+// import QRCode from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { fetchStudentDashboardData } from "../../services/api";
 import { Cell, Column, Table2 } from "@blueprintjs/table";
 
@@ -219,9 +220,15 @@ const StudentDashboard: React.FC = () => {
                 dashboardData.activeSession.end_time
               ).toLocaleTimeString()}
             </p>
-            <p>Time Remaining: {countdown}</p>
+            {/* <p>Time Remaining: {countdown}</p> */}
             <div className="mt-2">
-              <QRCode value={dashboardData.activeSession.qr_code} size={128} />
+              {/* <QRCode value={dashboardData.activeSession.qr_code} size={128} /> */}
+              {/* <QRCodeSVG value={dashboardData.activeSession.qr_code} /> */}
+              {dashboardData.activeSession.qr_code}
+              <QRCodeCanvas
+                value={dashboardData.activeSession.qr_code}
+                size={200}
+              />
             </div>
           </Card>
         )}
