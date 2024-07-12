@@ -4,7 +4,6 @@ import {
   Elevation,
   H3,
   H5,
-  Tag,
   Spinner,
   Intent,
   Callout,

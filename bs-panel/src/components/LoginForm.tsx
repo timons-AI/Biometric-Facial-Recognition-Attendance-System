@@ -5,8 +5,6 @@ import { Button, FormGroup, InputGroup, Intent, Card } from "@blueprintjs/core";
 import { login } from "../api/api";
 import { userAtom, isAuthenticatedAtom } from "../store/auth";
 import { showToast } from "./Toaster";
-import LoadingSpinner from "./LoadingSpinner";
-
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

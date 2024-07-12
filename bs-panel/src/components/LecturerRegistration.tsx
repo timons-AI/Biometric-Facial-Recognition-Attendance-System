@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button, FormGroup, InputGroup, Intent, Card } from "@blueprintjs/core";
 import { register } from "../api/api";
 import { showToast } from "./Toaster";
-import FaceCapture from "./FaceCapture";
 
 const LecturerRegistration: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +17,7 @@ const LecturerRegistration: React.FC = () => {
     semester: "",
   });
 
-  const [faceImages, setFaceImages] = useState<File[]>([]);
+  const [faceImages] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (

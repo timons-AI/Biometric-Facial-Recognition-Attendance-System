@@ -12,8 +12,7 @@ import {
   Position,
   Callout,
 } from "@blueprintjs/core";
-import { useAtom } from "jotai";
-import { userAtom } from "../store/auth";
+
 import api from "../api/api";
 
 const AppToaster = Toaster.create({
@@ -77,7 +76,6 @@ const daysOfWeek = [
 ];
 
 const AdminTimetableManagement: React.FC = () => {
-  const [user] = useAtom(userAtom);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);

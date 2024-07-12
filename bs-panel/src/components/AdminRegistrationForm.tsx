@@ -16,7 +16,8 @@ const AdminRegistration: React.FC = () => {
     email: "",
     password: "",
   });
-  const [loading, setLoading] = useState(false);
+
+  const [, setLoading] = useState(false);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };

@@ -7,7 +7,6 @@ import {
   HTMLSelect,
   Intent,
 } from "@blueprintjs/core";
-import { useNavigate } from "react-router-dom";
 import api, { register } from "../api/api";
 import FaceCapture from "./FaceCapture";
 import { showToast } from "./Toaster";
