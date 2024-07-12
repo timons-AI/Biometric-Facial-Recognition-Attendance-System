@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 from claude_face_recognition import FaceRecognition
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"]}})
+CORS(app, resources={r"/api/*": {"origins": ["*","https://be71-41-210-154-105.ngrok-free.app"], "allow_headers": ["Content-Type", "Authorization"]}})
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://laravel_user:laravel_user@localhost/attendance_system_v1'
@@ -784,6 +784,11 @@ def check_attendance():
     
     face = faces[0]
     aligned_face = face_recognition.align_face(img_np, face)
+    
+    # Check face quality
+    if not face_recognition.check_face_quality(aligned_face):
+        return jsonify({"message": "Poor quality image. Please try again with better lighting and less blur."}), 200
+    
     face_embedding = face_recognition.get_face_embedding(aligned_face)
     
     if face_embedding is None:
@@ -795,6 +800,7 @@ def check_attendance():
     matching_student = None
     best_match_distance = float('inf')
     for student in all_students:
+        # Skip the first student 
         if student.id == 1:
             continue
         if student.face_encoding:
@@ -810,74 +816,87 @@ def check_attendance():
                 continue
     
     if matching_student is None:
-        logger.info(f"No matching student found. Best match distance: {best_match_distance}")
         return jsonify({"message": "Face not recognized as a registered student"}), 200
-    
-    logger.info(f"Matching student found: {matching_student.name}, distance: {best_match_distance}")
+
+    now = datetime.now()
     
     # Check for active sessions
     active_session = Attendance.query.filter_by(student_id=matching_student.user_id, check_out_time=None).first()
     
-    if active_session:
-        # End the active session if it's within 30 minutes of the end time
-        timetable_entry = active_session.timetable
-        if datetime.now() >= timetable_entry.end_time - timedelta(minutes=30):
-            active_session.check_out_time = datetime.now()
-            db.session.commit()
-            return jsonify({
-                "message": "Session ended successfully",
-                "student_name": matching_student.name,
-                "course": timetable_entry.course_unit.name
-            }), 200
-        else:
-            return jsonify({
-                "message": "Active session ongoing",
-                "student_name": matching_student.name,
-                "course": timetable_entry.course_unit.name,
-                "end_time": timetable_entry.end_time.strftime('%H:%M')
-            }), 200
-    
-    # Check for upcoming classes
-    now = datetime.now()
-    upcoming_class = Timetable.query.join(CourseUnit).filter(
-        Timetable.day == DayOfWeek(now.strftime('%A')),
-        Timetable.start_time > now.time(),
-        Timetable.start_time <= (now + timedelta(minutes=30)).time(),
+    # Find the next scheduled class
+    next_class = Timetable.query.join(CourseUnit).filter(
+        CourseUnit.course_id == matching_student.course_id,
+        Timetable.semester_id == matching_student.semester_id,
+        ((Timetable.day > DayOfWeek(now.strftime('%A'))) |
+         ((Timetable.day == DayOfWeek(now.strftime('%A'))) & (Timetable.start_time > now.time())))
+    ).order_by(Timetable.day, Timetable.start_time).first()
+
+    # Get all classes for the week
+    all_classes = Timetable.query.join(CourseUnit).filter(
         CourseUnit.course_id == matching_student.course_id,
         Timetable.semester_id == matching_student.semester_id
-    ).order_by(Timetable.start_time).first()
-    
-    if upcoming_class:
-        # Student is early for the next class
-        if now >= datetime.combine(now.date(), upcoming_class.start_time):
-            # Class has started, mark attendance
-            new_attendance = Attendance(
-                student_id=matching_student.user_id,
-                timetable_id=upcoming_class.id,
-                date=now.date(),
-                check_in_time=now
-            )
-            db.session.add(new_attendance)
+    ).order_by(Timetable.day, Timetable.start_time).all()
+
+    response_data = {
+        "student_name": matching_student.name,
+        "current_time": now.strftime('%Y-%m-%d %H:%M:%S'),
+        "active_session": None,
+        "next_lecture": None,
+        "weekly_schedule": []
+    }
+
+    if active_session:
+        timetable_entry = active_session.timetable
+        response_data["active_session"] = {
+            "course": timetable_entry.course_unit.name,
+            "start_time": timetable_entry.start_time.strftime('%H:%M'),
+            "end_time": timetable_entry.end_time.strftime('%H:%M'),
+            "room": timetable_entry.room
+        }
+        if now >= timetable_entry.end_time - timedelta(minutes=30):
+            active_session.check_out_time = now
             db.session.commit()
-            return jsonify({
-                "message": "Attendance recorded for current class",
-                "student_name": matching_student.name,
-                "course": upcoming_class.course_unit.name
-            }), 200
+            response_data["message"] = "Session ended successfully"
         else:
-            # Class hasn't started yet
-            time_until_start = (datetime.combine(now.date(), upcoming_class.start_time) - now).total_seconds() / 60
-            return jsonify({
-                "message": f"Early for next class. Starts in {int(time_until_start)} minutes",
-                "student_name": matching_student.name,
-                "course": upcoming_class.course_unit.name,
-                "start_time": upcoming_class.start_time.strftime('%H:%M')
-            }), 200
-    
-    return jsonify({
-        "message": "No upcoming classes in the next 30 minutes",
-        "student_name": matching_student.name
-    }), 200
+            response_data["message"] = "Active session ongoing"
+    elif next_class:
+        # Convert the day value to an integer
+        day_mapping = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        next_class_day = day_mapping.get(next_class.day.value, 0)  # Default to Monday (0) if not found
+        
+        next_class_datetime = datetime.combine(
+            now.date() + timedelta(days=(next_class_day - now.weekday() + 7) % 7),
+            next_class.start_time
+        )
+        time_until_next = next_class_datetime - now
+        response_data["next_lecture"] = {
+            "course": next_class.course_unit.name,
+            "day": next_class.day.value,
+            "date": next_class_datetime.strftime('%Y-%m-%d'),
+            "start_time": next_class.start_time.strftime('%H:%M'),
+            "end_time": next_class.end_time.strftime('%H:%M'),
+            "room": next_class.room,
+            "time_until": str(time_until_next).split('.')[0]
+        }
+        if time_until_next <= timedelta(minutes=30):
+            response_data["message"] = f"Next class starts in {str(time_until_next).split('.')[0]}"
+        else:
+            response_data["message"] = "No immediate upcoming classes"
+    else:
+        response_data["message"] = "No upcoming classes scheduled"
+    for class_ in all_classes:
+        response_data["weekly_schedule"].append({
+            "day": class_.day.value,
+            "course": class_.course_unit.name,
+            "start_time": class_.start_time.strftime('%H:%M'),
+            "end_time": class_.end_time.strftime('%H:%M'),
+            "room": class_.room
+        })
+
+    return jsonify(response_data), 200
 
 if __name__ == '__main__':
     with app.app_context():

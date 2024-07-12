@@ -1,23 +1,36 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Card, Callout, H3, Intent, Spinner, Tag } from "@blueprintjs/core";
+import { Card, Callout, H3, H4, Intent, Spinner, Tag } from "@blueprintjs/core";
 import api from "../api/api";
 
-interface NextLecture {
+interface ClassInfo {
   course: string;
+  start_time: string;
+  end_time: string;
+  room: string;
+}
+
+interface NextLecture extends ClassInfo {
   day: string;
   date: string;
-  start_time: string;
   time_until: string;
+}
+
+interface WeeklySchedule {
+  day: string;
+  course: string;
+  start_time: string;
+  end_time: string;
+  room: string;
 }
 
 interface AttendanceStatus {
   message: string;
   warning?: string;
   student_name?: string;
-  course?: string;
-  start_time?: string;
-  end_time?: string;
-  next_lecture?: NextLecture;
+  current_time?: string;
+  active_session?: ClassInfo | null;
+  next_lecture?: NextLecture | null;
+  weekly_schedule?: WeeklySchedule[];
 }
 
 const StudentViewPortal: React.FC = () => {
@@ -28,7 +41,6 @@ const StudentViewPortal: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     startCamera();
@@ -38,7 +50,7 @@ const StudentViewPortal: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const intervalId = setInterval(captureAndSendImage, 2000);
+    const intervalId = setInterval(captureAndSendImage, 2000); // Capture every 5 seconds
     return () => clearInterval(intervalId);
   }, []);
 
@@ -85,15 +97,10 @@ const StudentViewPortal: React.FC = () => {
     try {
       setIsProcessing(true);
       setError(null);
-      setWarning(null);
       const response = await api.post("/check-attendance", {
         image: imageData,
       });
-      if (response.data.warning) {
-        setWarning(response.data.warning);
-      } else {
-        setAttendanceStatus(response.data);
-      }
+      setAttendanceStatus(response.data);
     } catch (err: any) {
       console.error("Error processing attendance:", err);
       setError(
@@ -105,15 +112,17 @@ const StudentViewPortal: React.FC = () => {
       setIsProcessing(false);
     }
   };
-  const getCalloutIntent = (message: string): Intent => {
+
+  const getCalloutIntent = (status: AttendanceStatus): Intent => {
+    if (status.warning) return Intent.WARNING;
     if (
-      message.includes("Session ended") ||
-      message.includes("Attendance recorded")
+      status.message.includes("Session ended") ||
+      status.message.includes("Attendance recorded")
     ) {
       return Intent.SUCCESS;
     } else if (
-      message.includes("Active session") ||
-      message.includes("Early for next class")
+      status.message.includes("Active session") ||
+      status.message.includes("Next class starts in")
     ) {
       return Intent.PRIMARY;
     } else {
@@ -126,35 +135,66 @@ const StudentViewPortal: React.FC = () => {
 
     return (
       <Callout
-        intent={getCalloutIntent(attendanceStatus.message)}
+        intent={getCalloutIntent(attendanceStatus)}
         title="Attendance Status"
         className="mb-4"
       >
-        <p>
-          <strong>{attendanceStatus.student_name}</strong>
-        </p>
-        <p>{attendanceStatus.message}</p>
-        {attendanceStatus.course && <p>Course: {attendanceStatus.course}</p>}
-        {attendanceStatus.start_time && (
-          <p>Starts at: {attendanceStatus.start_time}</p>
-        )}
-        {attendanceStatus.end_time && (
-          <p>Ends at: {attendanceStatus.end_time}</p>
-        )}
-        {attendanceStatus.next_lecture && (
-          <div>
-            <p>Next Scheduled Lecture:</p>
-            <p>Course: {attendanceStatus.next_lecture.course}</p>
-            <p>Day: {attendanceStatus.next_lecture.day}</p>
-            <p>Date: {attendanceStatus.next_lecture.date}</p>
-            <p>Start Time: {attendanceStatus.next_lecture.start_time}</p>
-            <p>
-              Time Until:{" "}
-              <Tag minimal intent="warning">
-                {attendanceStatus.next_lecture.time_until}
-              </Tag>
-            </p>
-          </div>
+        {attendanceStatus.warning ? (
+          <p>{attendanceStatus.warning}</p>
+        ) : (
+          <>
+            {attendanceStatus.student_name && (
+              <H3>{attendanceStatus.student_name}</H3>
+            )}
+            {attendanceStatus.current_time && (
+              <p>Current Time: {attendanceStatus.current_time}</p>
+            )}
+            <p>{attendanceStatus.message}</p>
+
+            {attendanceStatus.active_session && (
+              <div>
+                <H4>Active Session</H4>
+                <p>Course: {attendanceStatus.active_session.course}</p>
+                <p>Start Time: {attendanceStatus.active_session.start_time}</p>
+                <p>End Time: {attendanceStatus.active_session.end_time}</p>
+                <p>Room: {attendanceStatus.active_session.room}</p>
+              </div>
+            )}
+
+            {attendanceStatus.next_lecture && (
+              <div>
+                <H4>Next Scheduled Lecture</H4>
+                <p>Course: {attendanceStatus.next_lecture.course}</p>
+                <p>Day: {attendanceStatus.next_lecture.day}</p>
+                <p>Date: {attendanceStatus.next_lecture.date}</p>
+                <p>Start Time: {attendanceStatus.next_lecture.start_time}</p>
+                <p>End Time: {attendanceStatus.next_lecture.end_time}</p>
+                <p>Room: {attendanceStatus.next_lecture.room}</p>
+                <p>
+                  Time Until:{" "}
+                  <Tag intent={Intent.WARNING}>
+                    {attendanceStatus.next_lecture.time_until}
+                  </Tag>
+                </p>
+              </div>
+            )}
+
+            {attendanceStatus.weekly_schedule &&
+              attendanceStatus.weekly_schedule.length > 0 && (
+                <>
+                  <H4>Weekly Schedule</H4>
+                  {attendanceStatus.weekly_schedule.map((class_, index) => (
+                    <div key={index} className="mb-2">
+                      <p>
+                        <strong>{class_.day}</strong>: {class_.course} (
+                        {class_.start_time} - {class_.end_time}) Room:{" "}
+                        {class_.room}
+                      </p>
+                    </div>
+                  ))}
+                </>
+              )}
+          </>
         )}
       </Callout>
     );
@@ -167,11 +207,6 @@ const StudentViewPortal: React.FC = () => {
         {error && (
           <Callout intent={Intent.DANGER} title="Error" className="mb-4">
             {error}
-          </Callout>
-        )}
-        {warning && (
-          <Callout intent={Intent.WARNING} title="Warning" className="mb-4">
-            {warning}
           </Callout>
         )}
         {renderAttendanceStatus()}
