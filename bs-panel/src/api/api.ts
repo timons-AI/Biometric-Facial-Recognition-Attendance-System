@@ -1,6 +1,7 @@
 import axios from "axios";
 import { jwtDecode, JwtPayload } from "jwt-decode";
 import { Course } from "../timetable";
+import { PaginatedResponse } from "../components/AdminApproval";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -79,8 +80,13 @@ export const registerAdmin = async (adminData: any) => {
   return response.data;
 };
 
-export const getPendingRegistrations = async () => {
-  const response = await api.get("/admin/pending_registrations");
+export const getPendingRegistrations = async (
+  page: number = 1,
+  perPage: number = 10
+): Promise<PaginatedResponse> => {
+  const response = await api.get(
+    `/admin/pending_registrations?page=${page}&per_page=${perPage}`
+  );
   return response.data;
 };
 
@@ -93,14 +99,10 @@ export const rejectUser = async (userId: number) => {
   const response = await api.post(`/admin/reject_user/${userId}`);
   return response.data;
 };
-
 export const getLecturerTimetable = async (): Promise<Course[]> => {
   const response = await api.get("/api/lecturer/timetable");
   return response.data;
 };
 
-export const getStudentTimetable = async (): Promise<Course[]> => {
-  const response = await api.get("/api/student/timetable");
-  return response.data;
-};
+// export the api
 export default api;

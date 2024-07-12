@@ -13,3 +13,4 @@ const initialUser = token ? (jwtDecode(token) as User) : null;
 
 export const userAtom = atom<User | null>(initialUser);
 export const isAuthenticatedAtom = atom<boolean>(!!initialUser);
+export const darkModeAtom = atom(false);

@@ -1,10 +1,13 @@
-import { Position, Toaster, Intent } from "@blueprintjs/core";
+import { Position, Toaster, Intent, OverlayToaster } from "@blueprintjs/core";
 
-export const AppToaster = Toaster.create({
-  className: "recipe-toaster",
+export const AppToaster = OverlayToaster.createAsync({
+  className: "app-toaster",
   position: Position.TOP,
 });
 
-export const showToast = (message: string, intent: Intent = Intent.PRIMARY) => {
-  AppToaster.show({ message, intent });
+export const showToast = async (
+  message: string,
+  intent: Intent = Intent.PRIMARY
+) => {
+  (await AppToaster).show({ message, intent });
 };

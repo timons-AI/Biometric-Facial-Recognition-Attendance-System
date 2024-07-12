@@ -3,158 +3,162 @@ import {
   Card,
   Elevation,
   H3,
-  H4,
   H5,
   Tag,
-  Button,
-  Collapse,
+  Spinner,
+  Intent,
+  Callout,
 } from "@blueprintjs/core";
-import { useAtom } from "jotai";
-import { userAtom } from "../store/auth";
-import { Course, TimetableEntry } from "../timetable";
+import { Cell, Column, Table2 } from "@blueprintjs/table";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import api from "../api/api";
 
-const daysOfWeek = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface TimetableEntry {
+  day: string;
+  start_time: string;
+  end_time: string;
+  course_name: string;
+  room: string;
+}
+
+interface CourseStats {
+  course_name: string;
+  total_students: number;
+  total_attendances: number;
+  attendance_rate: number;
+}
+
+interface LecturerDashboardData {
+  lecturer_name: string;
+  timetable: TimetableEntry[];
+  upcoming_classes: TimetableEntry[];
+  course_stats: CourseStats[];
+}
 
 const LecturerDashboard: React.FC = () => {
-  const [user] = useAtom(userAtom);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [currentDay] = useState<string>(daysOfWeek[new Date().getDay() - 1]);
+  const [dashboardData, setDashboardData] =
+    useState<LecturerDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await api.get("/lecturer/timetable");
-        setCourses(response.data);
-      } catch (error) {
-        console.error("Error fetching timetable:", error);
-      }
-    };
-    fetchCourses();
+    fetchDashboardData();
   }, []);
 
-  const hasLectureToday = (course: Course) => {
-    return course.timetableEntries.some((entry) => entry.day === currentDay);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/lecturer/dashboard");
+      setDashboardData(response.data);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError("Failed to load dashboard data. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+    return <Spinner size={50} />;
+  }
+
+  if (error) {
+    return <Callout intent={Intent.DANGER}>{error}</Callout>;
+  }
+
+  if (!dashboardData) {
+    return (
+      <Callout intent={Intent.WARNING}>No dashboard data available.</Callout>
+    );
+  }
+
+  const { lecturer_name, timetable, upcoming_classes, course_stats } =
+    dashboardData;
+
+  const attendanceChartData = {
+    labels: course_stats.map((stat) => stat.course_name),
+    datasets: [
+      {
+        label: "Attendance Rate",
+        data: course_stats.map((stat) => stat.attendance_rate),
+        backgroundColor: "rgba(75, 192, 192, 0.6)",
+      },
+    ],
+  };
+
+  const renderDayCell = (rowIndex: number) => (
+    <Cell>{timetable[rowIndex].day}</Cell>
+  );
+
+  const renderTimeCell = (rowIndex: number) => (
+    <Cell>{`${timetable[rowIndex].start_time} - ${timetable[rowIndex].end_time}`}</Cell>
+  );
+
+  const renderCourseCell = (rowIndex: number) => (
+    <Cell>{timetable[rowIndex].course_name}</Cell>
+  );
+
+  const renderRoomCell = (rowIndex: number) => (
+    <Cell>{timetable[rowIndex].room}</Cell>
+  );
 
   return (
     <div className="p-4">
-      <H3>Welcome, {user?.name}</H3>
-      <H4>Your Courses</H4>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        {courses.map((course) => (
-          <Card
-            key={course.id}
-            elevation={Elevation.TWO}
-            interactive={true}
-            onClick={() => setSelectedCourse(course)}
-          >
-            <H5>{course.name}</H5>
-            {hasLectureToday(course) && (
-              <Tag intent="primary">Lecture Today</Tag>
-            )}
+      <H3>Welcome, {lecturer_name}</H3>
+
+      <Card elevation={Elevation.TWO} className="mt-4">
+        <H5>Course Statistics</H5>
+        <div style={{ height: "300px" }}>
+          <Bar
+            data={attendanceChartData}
+            options={{ maintainAspectRatio: false }}
+          />
+        </div>
+      </Card>
+
+      <Card elevation={Elevation.TWO} className="mt-4">
+        <H5>Your Timetable</H5>
+        <Table2 numRows={timetable.length}>
+          <Column name="Day" cellRenderer={renderDayCell} />
+          <Column name="Time" cellRenderer={renderTimeCell} />
+          <Column name="Course" cellRenderer={renderCourseCell} />
+          <Column name="Room" cellRenderer={renderRoomCell} />
+        </Table2>
+      </Card>
+
+      <Card elevation={Elevation.TWO} className="mt-4">
+        <H5>Upcoming Classes</H5>
+        {upcoming_classes.map((class_, index) => (
+          <Card key={index} className="mb-2">
+            <H5>{class_.course_name}</H5>
+            <p>Day: {class_.day}</p>
+            <p>
+              Time: {class_.start_time} - {class_.end_time}
+            </p>
+            <p>Room: {class_.room}</p>
+            <Tag intent={Intent.PRIMARY}>Upcoming</Tag>
           </Card>
         ))}
-      </div>
-      {selectedCourse && (
-        <CourseDetail course={selectedCourse} currentDay={currentDay} />
-      )}
+      </Card>
     </div>
-  );
-};
-
-interface CourseDetailProps {
-  course: Course;
-  currentDay: string;
-}
-
-const CourseDetail: React.FC<CourseDetailProps> = ({ course, currentDay }) => {
-  return (
-    <Card elevation={Elevation.TWO}>
-      <H4>{course.name} Timetable</H4>
-      <DayTimetable
-        entries={course.timetableEntries.filter(
-          (entry) => entry.day === currentDay
-        )}
-        day={currentDay}
-        isOpen={true}
-      />
-      {daysOfWeek
-        .filter((day) => day !== currentDay)
-        .map((day) => (
-          <DayTimetable
-            key={day}
-            entries={course.timetableEntries.filter(
-              (entry) => entry.day === day
-            )}
-            day={day}
-            isOpen={false}
-          />
-        ))}
-    </Card>
-  );
-};
-
-interface DayTimetableProps {
-  entries: TimetableEntry[];
-  day: string;
-  isOpen: boolean;
-}
-
-const DayTimetable: React.FC<DayTimetableProps> = ({
-  entries,
-  day,
-  isOpen,
-}) => {
-  const [isExpanded, setIsExpanded] = useState(isOpen);
-  const isCurrentlyRunning = (entry: TimetableEntry) => {
-    const now = new Date();
-    const startTime = new Date();
-    const endTime = new Date();
-    const [startHour, startMinute] = entry.startTime.split(":");
-    const [endHour, endMinute] = entry.endTime.split(":");
-    startTime.setHours(parseInt(startHour), parseInt(startMinute));
-    endTime.setHours(parseInt(endHour), parseInt(endMinute));
-    return now >= startTime && now <= endTime;
-  };
-  return (
-    <Card className="mb-2">
-      <Button
-        fill
-        minimal
-        rightIcon={isExpanded ? "chevron-up" : "chevron-down"}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <H5>{day}</H5>
-      </Button>
-      <Collapse isOpen={isExpanded}>
-        {entries.length > 0 ? (
-          entries.map((entry) => (
-            <Card key={entry.id} className="mt-2">
-              <p>Course Unit: {entry.courseUnit.name}</p>
-              <p>
-                Time: {entry.startTime} - {entry.endTime}
-              </p>
-              <p>Room: {entry.room}</p>
-              {isCurrentlyRunning(entry) && (
-                <Tag intent="success">Currently Running</Tag>
-              )}
-            </Card>
-          ))
-        ) : (
-          <p>No lectures scheduled for this day.</p>
-        )}
-      </Collapse>
-    </Card>
   );
 };
 

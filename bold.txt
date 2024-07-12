@@ -4,10 +4,26 @@ src/
     App.tsx
     index.css
     main.tsx
+    timetable.ts
     vite-env.d.ts
+    api/
+        api.ts
     components/
+        AdminApproval.tsx
+        AdminDashboard.tsx
+        AdminRegistrationForm.tsx
+        AdminTimeTableMgt.tsx
         FaceCapture.tsx
+        LecturerDashboard.tsx
+        LoadingSpinner.tsx
+        LoginForm.tsx
         Navbar.tsx
+        PageNotFound.tsx
+        RegsitrationForm.tsx
+        StudentDashboard.tsx
+        StudentViewPortal.tsx
+        TeacherRegistrationForm.tsx
+        Toaster.ts
     hooks/
         useSessionCheck.tsx
     pages/
@@ -41,124 +57,115 @@ src/
 
 File: App.tsx
 --------------------------------------------------------------------------------
-import React, { useEffect, useRef, lazy, Suspense } from "react";
+import React from "react";
 import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
   BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
 } from "react-router-dom";
 import { useAtom } from "jotai";
-import { userAtom } from "./store/auth";
+import { isAuthenticatedAtom, userAtom } from "./store/auth";
 import AppNavbar from "./components/Navbar";
-import { Spinner } from "@blueprintjs/core";
-import { useSessionCheck } from "./hooks/useSessionCheck";
-import StartSessionPage from "./pages/student/StartSession";
-import UnifiedLoginPage from "./pages/UnifiedLoginPage";
-import AdminApprovalPage from "./pages/admin/ApprovalPage";
-import LiveAttendancePage from "./pages/student/LiveAttendancPage";
-
-const HomePage = lazy(() => import("./pages/HomePage"));
-const StudentLogin = lazy(() => import("./pages/student/Login"));
-const LecturerLogin = lazy(() => import("./pages/lecturer/Login"));
-const AdminLogin = lazy(() => import("./pages/admin/Login"));
-const AdminRegister = lazy(() => import("./pages/admin/Register"));
-const StudentDashboard = lazy(() => import("./pages/student/Dashboard"));
-const LecturerDashboard = lazy(() => import("./pages/lecturer/Dashboard"));
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
-const RegisterStudentPage = lazy(() => import("./pages/admin/RegisterStudent"));
-const RegisterLecturerPage = lazy(
-  () => import("./pages/admin/RegisterTeacher")
-);
+import RegistrationForm from "./components/RegsitrationForm";
+import LoginForm from "./components/LoginForm";
+import AdminApproval from "./components/AdminApproval";
+import StudentDashboard from "./components/StudentDashboard";
+import LecturerDashboard from "./components/LecturerDashboard";
+import AdminDashboard from "./components/AdminDashboard";
+import AdminRegistration from "./components/AdminRegistrationForm";
+import StudentViewPortal from "./components/StudentViewPortal";
+import PageNotFound from "./components/PageNotFound";
+import AdminTimetableManagement from "./components/AdminTimeTableMgt";
 
 const App: React.FC = () => {
-  const [user, setUser] = useAtom(userAtom);
-  useSessionCheck();
+  const [isAuthenticated] = useAtom(isAuthenticatedAtom);
+  const [user] = useAtom(userAtom);
 
   const PrivateRoute: React.FC<{
     element: React.ReactElement;
     allowedRoles: string[];
   }> = ({ element, allowedRoles }) => {
-    if (!user) {
-      return <Navigate to="/" />;
+    if (!isAuthenticated) {
+      return <Navigate to="/login" />;
     }
-    if (!allowedRoles.includes(user.role)) {
+    if (user && !allowedRoles.includes(user.role)) {
       return <Navigate to="/" />;
     }
     return element;
   };
 
   return (
-    // <Router>
-    <>
+    <Router>
       <AppNavbar />
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Suspense fallback={<Spinner />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/student/login" element={<StudentLogin />} />
-            <Route path="/lecturer/login" element={<LecturerLogin />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route
-              path="/student/start-session"
-              element={
-                <PrivateRoute
-                  element={<StartSessionPage />}
-                  allowedRoles={["student"]}
-                />
-              }
-            />
-            <Route
-              path="/student/dashboard"
-              element={
-                <PrivateRoute
-                  element={<StudentDashboard />}
-                  allowedRoles={["student"]}
-                />
-              }
-            />
-            <Route
-              path="/lecturer/dashboard"
-              element={
-                <PrivateRoute
-                  element={<LecturerDashboard />}
-                  allowedRoles={["lecturer"]}
-                />
-              }
-            />
-            <Route path="/admin/register" element={<AdminRegister />} />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <PrivateRoute
-                  element={<AdminDashboard />}
-                  allowedRoles={["admin"]}
-                />
-              }
-            />
-            <Route path="/register" element={<RegisterStudentPage />} />
-            <Route
-              path="/admin/register-lecturer"
-              element={
-                <PrivateRoute
-                  element={<RegisterLecturerPage />}
-                  allowedRoles={["admin"]}
-                />
-              }
-            />
-            <Route path="*" element={<Navigate to="/" />} />
-            <Route
-              path="/admin/approve-studentsl"
-              element={<AdminApprovalPage />}
-            />
-            <Route path="/login" element={<UnifiedLoginPage />} />
-            <Route path="/live-attendance" element={<LiveAttendancePage />} />
-          </Routes>
-        </Suspense>
+      <div className="container mx-auto mt-4">
+        <Routes>
+          <Route path="/register" element={<RegistrationForm />} />
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/student-portal" element={<StudentViewPortal />} />
+          <Route
+            path="/student/dashboard"
+            element={
+              <PrivateRoute
+                element={<StudentDashboard />}
+                allowedRoles={["student"]}
+              />
+            }
+          />
+          <Route
+            path="/lecturer/dashboard"
+            element={
+              <PrivateRoute
+                element={<LecturerDashboard />}
+                allowedRoles={["lecturer"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <PrivateRoute
+                element={<AdminDashboard />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          <Route
+            path="/admin/approve-students"
+            element={
+              <PrivateRoute
+                element={<AdminApproval />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+          {/* <Route
+            path="/admin/register-admin"
+            element={
+              <PrivateRoute
+                element={<AdminRegistration />}
+                allowedRoles={["admin"]}
+              />
+            }
+          /> */}
+
+          <Route path="/admin/register-admin" element={<AdminRegistration />} />
+          <Route
+            path="/admin/timetable-management"
+            element={
+              <PrivateRoute
+                element={<AdminTimetableManagement />}
+                allowedRoles={["admin"]}
+              />
+            }
+          />
+
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* pages that don't exist */}
+          <Route path="*" element={<PageNotFound />} />
+        </Routes>
       </div>
-    </>
-    // </Router>
+    </Router>
   );
 };
 
@@ -202,23 +209,976 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { BrowserRouter, Router } from "react-router-dom";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <BrowserRouter>
-      {/* <Router> */}
-      <App />
-      {/* </Router> */}
-    </BrowserRouter>
+    <App />
   </React.StrictMode>
 );
+
+================================================================================
+
+File: timetable.ts
+--------------------------------------------------------------------------------
+export interface CourseUnit {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface TimetableEntry {
+  id: number;
+  day: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+  courseUnit: CourseUnit;
+}
+
+export interface Course {
+  id: number;
+  name: string;
+  timetableEntries: TimetableEntry[];
+}
 
 ================================================================================
 
 File: vite-env.d.ts
 --------------------------------------------------------------------------------
 /// <reference types="vite/client" />
+
+================================================================================
+
+File: api\api.ts
+--------------------------------------------------------------------------------
+import axios from "axios";
+import { jwtDecode, JwtPayload } from "jwt-decode";
+import { Course } from "../timetable";
+import { PaginatedResponse } from "../components/AdminApproval";
+
+const API_URL = "http://localhost:5000/api";
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export interface UserData {
+  id: string;
+  email: string;
+  role: "student" | "lecturer" | "admin";
+  name: string;
+}
+
+export const login = async (
+  email: string,
+  password: string
+): Promise<UserData> => {
+  const response = await api.post("/login", { email, password });
+  const { access_token } = response.data;
+  localStorage.setItem("token", access_token);
+
+  const decodedToken = jwtDecode<UserData & { exp: number }>(access_token);
+  console.log("Decoded Token:", decodedToken);
+
+  if (
+    !decodedToken.id ||
+    !decodedToken.email ||
+    !decodedToken.role ||
+    !decodedToken.name
+  ) {
+    throw new Error("Invalid token payload");
+  }
+
+  return {
+    id: decodedToken.id,
+    email: decodedToken.email,
+    role: decodedToken.role as "student" | "lecturer" | "admin",
+    name: decodedToken.name,
+  };
+};
+
+export const register = async (userData: FormData): Promise<void> => {
+  const response = await api.post("/register", userData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
+export const registerAdmin = async (adminData: any) => {
+  const response = await api.post("/register/admin", adminData);
+  return response.data;
+};
+
+export const getPendingRegistrations = async (
+  page: number = 1,
+  perPage: number = 10
+): Promise<PaginatedResponse> => {
+  const response = await api.get(
+    `/admin/pending_registrations?page=${page}&per_page=${perPage}`
+  );
+  return response.data;
+};
+
+export const approveUser = async (userId: number) => {
+  const response = await api.post(`/admin/approve_user/${userId}`);
+  return response.data;
+};
+
+export const rejectUser = async (userId: number) => {
+  const response = await api.post(`/admin/reject_user/${userId}`);
+  return response.data;
+};
+export const getLecturerTimetable = async (): Promise<Course[]> => {
+  const response = await api.get("/api/lecturer/timetable");
+  return response.data;
+};
+
+export const getStudentTimetable = async (): Promise<Course[]> => {
+  const response = await api.get("/api/student/timetable");
+  return response.data;
+};
+export default api;
+
+================================================================================
+
+File: components\AdminApproval.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import {
+  Button,
+  Card,
+  Elevation,
+  HTMLTable,
+  Intent,
+  Spinner,
+} from "@blueprintjs/core";
+import { getPendingRegistrations, approveUser, rejectUser } from "../api/api";
+import { showToast } from "./Toaster";
+
+interface PendingUser {
+  user_id: number;
+  email: string;
+  role: string;
+  name?: string;
+  student_id?: string;
+  academic_year_id?: number;
+  course_id?: number;
+  college_id?: number;
+  semester_id?: number;
+}
+
+export interface PaginatedResponse {
+  pending_registrations: PendingUser[];
+  total_count: number;
+  pages: number;
+  current_page: number;
+  per_page: number;
+}
+
+const AdminApproval: React.FC = () => {
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchPendingRegistrations(currentPage);
+  }, [currentPage]);
+
+  const fetchPendingRegistrations = async (page: number) => {
+    setIsLoading(true);
+    try {
+      const data = await getPendingRegistrations(page);
+      setPendingUsers(data.pending_registrations);
+      setTotalPages(data.pages);
+      setCurrentPage(data.current_page);
+    } catch (error) {
+      console.error("Failed to fetch pending registrations:", error);
+      showToast("Failed to fetch pending registrations", Intent.DANGER);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApprove = async (userId: number) => {
+    try {
+      await approveUser(userId);
+      fetchPendingRegistrations(currentPage);
+      showToast("User approved", Intent.SUCCESS);
+    } catch (error) {
+      console.error("Failed to approve user:", error);
+      showToast("Failed to approve user", Intent.DANGER);
+    }
+  };
+
+  const handleReject = async (userId: number) => {
+    try {
+      await rejectUser(userId);
+      fetchPendingRegistrations(currentPage);
+      showToast("User rejected", Intent.DANGER);
+    } catch (error) {
+      console.error("Failed to reject user:", error);
+      showToast("Failed to reject user", Intent.DANGER);
+    }
+  };
+
+  return (
+    <Card elevation={Elevation.TWO} className="w-full max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Pending Registrations</h2>
+      {isLoading ? (
+        <Spinner />
+      ) : (
+        <>
+          <HTMLTable className="w-full">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Name</th>
+                <th>Student ID</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingUsers.map((user) => (
+                <tr key={user.user_id}>
+                  <td>{user.email}</td>
+                  <td>{user.role}</td>
+                  <td>{user.name || "-"}</td>
+                  <td>{user.student_id || "-"}</td>
+                  <td>
+                    <Button
+                      intent={Intent.SUCCESS}
+                      icon="tick"
+                      onClick={() => handleApprove(user.user_id)}
+                      className="mr-2"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      intent={Intent.DANGER}
+                      icon="cross"
+                      onClick={() => handleReject(user.user_id)}
+                    >
+                      Reject
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </HTMLTable>
+          <div className="mt-4 flex justify-between items-center">
+            <Button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              disabled={currentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+            >
+              Next
+            </Button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+};
+
+export default AdminApproval;
+
+================================================================================
+
+File: components\AdminDashboard.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { Card, Callout, H3, H5, Tag } from "@blueprintjs/core";
+import { useAtom } from "jotai";
+import { userAtom } from "../store/auth";
+
+const AdminDashboard: React.FC = () => {
+  const [user] = useAtom(userAtom);
+
+  return (
+    <div className="p-4">
+      <Callout intent="warning" title="Under Development">
+        This dashboard is currently under development. More features will be
+        added soon.
+      </Callout>
+      <Card className="mt-4">
+        <H3>Welcome, {user?.name}</H3>
+        <H5>Admin Information</H5>
+        <p>Email: {user?.email}</p>
+        <p>
+          Role: <Tag intent="primary">{user?.role}</Tag>
+        </p>
+        {/* Add more admin-specific information here */}
+      </Card>
+    </div>
+  );
+};
+
+export default AdminDashboard;
+
+================================================================================
+
+File: components\AdminRegistrationForm.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import {
+  Button,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Card,
+  Callout,
+} from "@blueprintjs/core";
+import { registerAdmin } from "../api/api";
+import { showToast } from "./Toaster";
+
+const AdminRegistration: React.FC = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await registerAdmin(formData);
+      showToast("Admin registered successfully", Intent.SUCCESS);
+    } catch (error) {
+      console.error("Admin registration failed:", error);
+      showToast("Admin registration failed", Intent.DANGER);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card elevation={2} className="w-full max-w-md mx-auto">
+      <Callout intent={Intent.WARNING} title="Temporary Feature">
+        This admin registration page is temporary and should be removed or
+        secured in production.
+      </Callout>
+      <h2 className="text-2xl font-bold mb-4 mt-4">Admin Registration</h2>
+      <form onSubmit={handleSubmit}>
+        <FormGroup label="Name" labelFor="name-input">
+          <InputGroup
+            id="name-input"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <Button
+          type="submit"
+          intent={Intent.PRIMARY}
+          text="Register Admin"
+          className="w-full mt-4"
+        />
+      </form>
+    </Card>
+  );
+};
+
+export default AdminRegistration;
+
+================================================================================
+
+File: components\AdminTimeTableMgt.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  FormGroup,
+  InputGroup,
+  Button,
+  HTMLSelect,
+  H3,
+  H4,
+  Intent,
+  Toaster,
+  Position,
+  Callout,
+} from "@blueprintjs/core";
+import { useAtom } from "jotai";
+import { userAtom } from "../store/auth";
+import api from "../api/api";
+
+const AppToaster = Toaster.create({
+  className: "recipe-toaster",
+  position: Position.TOP,
+});
+
+interface AcademicYear {
+  id: number;
+  year: string;
+}
+
+interface Semester {
+  id: number;
+  name: string;
+  academicYearId: number;
+}
+
+interface College {
+  id: number;
+  name: string;
+}
+
+interface Course {
+  id: number;
+  name: string;
+  collegeId: number;
+}
+
+interface CourseUnit {
+  id: number;
+  code: string;
+  name: string;
+  courseId: number;
+}
+
+interface Lecturer {
+  id: number;
+  name: string;
+}
+
+interface TimetableEntry {
+  id?: number;
+  semesterId: number;
+  courseUnitId: number;
+  day: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+  lecturerId: number;
+}
+
+const daysOfWeek = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+const AdminTimetableManagement: React.FC = () => {
+  const [user] = useAtom(userAtom);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [courseUnits, setCourseUnits] = useState<CourseUnit[]>([]);
+  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+
+  const [newAcademicYear, setNewAcademicYear] = useState("");
+  const [newSemester, setNewSemester] = useState({
+    name: "",
+    academicYearId: "",
+  });
+  const [newCollege, setNewCollege] = useState("");
+  const [newCourse, setNewCourse] = useState({ name: "", collegeId: "" });
+  const [newCourseUnit, setNewCourseUnit] = useState({
+    code: "",
+    name: "",
+    courseId: "",
+  });
+  const [newTimetableEntry, setNewTimetableEntry] = useState<TimetableEntry>({
+    semesterId: 0,
+    courseUnitId: 0,
+    day: "Monday",
+    startTime: "",
+    endTime: "",
+    room: "",
+    lecturerId: 0,
+  });
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
+    try {
+      const [
+        yearsRes,
+        semestersRes,
+        collegesRes,
+        coursesRes,
+        unitsRes,
+        lecturersRes,
+      ] = await Promise.all([
+        api.get("/admin/academic-years"),
+        api.get("/admin/semesters"),
+        api.get("/admin/colleges"),
+        api.get("/admin/courses"),
+        api.get("/admin/course-units"),
+        api.get("/admin/lecturers"),
+      ]);
+      setAcademicYears(yearsRes.data);
+      setSemesters(semestersRes.data);
+      setColleges(collegesRes.data);
+      setCourses(coursesRes.data);
+      setCourseUnits(unitsRes.data);
+      setLecturers(lecturersRes.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      AppToaster.show({
+        message: "Error fetching data",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  const handleCreateAcademicYear = async () => {
+    try {
+      await api.post("/admin/academic-years", { year: newAcademicYear });
+      setNewAcademicYear("");
+      fetchAllData();
+      AppToaster.show({
+        message: "Academic year created successfully",
+        intent: Intent.SUCCESS,
+      });
+    } catch (error) {
+      console.error("Error creating academic year:", error);
+      AppToaster.show({
+        message: "Error creating academic year",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  const handleCreateSemester = async () => {
+    try {
+      await api.post("/admin/semesters", newSemester);
+      setNewSemester({ name: "", academicYearId: "" });
+      fetchAllData();
+      AppToaster.show({
+        message: "Semester created successfully",
+        intent: Intent.SUCCESS,
+      });
+    } catch (error) {
+      console.error("Error creating semester:", error);
+      AppToaster.show({
+        message: "Error creating semester",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  const handleCreateCollege = async () => {
+    try {
+      await api.post("/admin/colleges", { name: newCollege });
+      setNewCollege("");
+      fetchAllData();
+      AppToaster.show({
+        message: "College created successfully",
+        intent: Intent.SUCCESS,
+      });
+    } catch (error) {
+      console.error("Error creating college:", error);
+      AppToaster.show({
+        message: "Error creating college",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  const handleCreateCourse = async () => {
+    try {
+      await api.post("/admin/courses", newCourse);
+      setNewCourse({ name: "", collegeId: "" });
+      fetchAllData();
+      AppToaster.show({
+        message: "Course created successfully",
+        intent: Intent.SUCCESS,
+      });
+    } catch (error) {
+      console.error("Error creating course:", error);
+      AppToaster.show({
+        message: "Error creating course",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  const handleCreateCourseUnit = async () => {
+    try {
+      await api.post("/admin/course-units", newCourseUnit);
+      setNewCourseUnit({ code: "", name: "", courseId: "" });
+      fetchAllData();
+      AppToaster.show({
+        message: "Course unit created successfully",
+        intent: Intent.SUCCESS,
+      });
+    } catch (error) {
+      console.error("Error creating course unit:", error);
+      AppToaster.show({
+        message: "Error creating course unit",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  const handleCreateTimetableEntry = async () => {
+    try {
+      await api.post("/admin/timetable-entries", newTimetableEntry);
+      setNewTimetableEntry({
+        semesterId: 0,
+        courseUnitId: 0,
+        day: "Monday",
+        startTime: "",
+        endTime: "",
+        room: "",
+        lecturerId: 0,
+      });
+      fetchAllData();
+      AppToaster.show({
+        message: "Timetable entry created successfully",
+        intent: Intent.SUCCESS,
+      });
+    } catch (error) {
+      console.error("Error creating timetable entry:", error);
+      AppToaster.show({
+        message: "Error creating timetable entry",
+        intent: Intent.DANGER,
+      });
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <Callout intent="warning" title="Under Development" className=" my-2">
+        This dashboard is currently under development. More features will be
+        added soon.
+      </Callout>
+      <H3>Timetable Management</H3>
+
+      <Card className="mb-4">
+        <H4>Create Academic Year</H4>
+        <FormGroup label="Academic Year" labelFor="academic-year-input">
+          <InputGroup
+            id="academic-year-input"
+            value={newAcademicYear}
+            onChange={(e) => setNewAcademicYear(e.target.value)}
+            placeholder="e.g., 2023/2024"
+          />
+        </FormGroup>
+        <Button intent={Intent.PRIMARY} onClick={handleCreateAcademicYear}>
+          Create Academic Year
+        </Button>
+      </Card>
+
+      <Card className="mb-4">
+        <H4>Create Semester</H4>
+        <FormGroup label="Semester Name" labelFor="semester-name-input">
+          <InputGroup
+            id="semester-name-input"
+            value={newSemester.name}
+            onChange={(e) =>
+              setNewSemester({ ...newSemester, name: e.target.value })
+            }
+            placeholder="e.g., Semester I"
+          />
+        </FormGroup>
+        <FormGroup label="Academic Year" labelFor="semester-year-select">
+          <HTMLSelect
+            id="semester-year-select"
+            value={newSemester.academicYearId}
+            onChange={(e) =>
+              setNewSemester({ ...newSemester, academicYearId: e.target.value })
+            }
+          >
+            <option value="">Select Academic Year</option>
+            {academicYears.map((year) => (
+              <option key={year.id} value={year.id}>
+                {year.year}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <Button intent={Intent.PRIMARY} onClick={handleCreateSemester}>
+          Create Semester
+        </Button>
+      </Card>
+
+      <Card className="mb-4">
+        <H4>Create College</H4>
+        <FormGroup label="College Name" labelFor="college-name-input">
+          <InputGroup
+            id="college-name-input"
+            value={newCollege}
+            onChange={(e) => setNewCollege(e.target.value)}
+            placeholder="e.g., College of Computing and Information Sciences"
+          />
+        </FormGroup>
+        <Button intent={Intent.PRIMARY} onClick={handleCreateCollege}>
+          Create College
+        </Button>
+      </Card>
+
+      <Card className="mb-4">
+        <H4>Create Course</H4>
+        <FormGroup label="Course Name" labelFor="course-name-input">
+          <InputGroup
+            id="course-name-input"
+            value={newCourse.name}
+            onChange={(e) =>
+              setNewCourse({ ...newCourse, name: e.target.value })
+            }
+            placeholder="e.g., Computer Science"
+          />
+        </FormGroup>
+        <FormGroup label="College" labelFor="course-college-select">
+          <HTMLSelect
+            id="course-college-select"
+            value={newCourse.collegeId}
+            onChange={(e) =>
+              setNewCourse({ ...newCourse, collegeId: e.target.value })
+            }
+          >
+            <option value="">Select College</option>
+            {colleges.map((college) => (
+              <option key={college.id} value={college.id}>
+                {college.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <Button intent={Intent.PRIMARY} onClick={handleCreateCourse}>
+          Create Course
+        </Button>
+      </Card>
+
+      <Card className="mb-4">
+        <H4>Create Course Unit</H4>
+        <FormGroup label="Course Unit Code" labelFor="course-unit-code-input">
+          <InputGroup
+            id="course-unit-code-input"
+            value={newCourseUnit.code}
+            onChange={(e) =>
+              setNewCourseUnit({ ...newCourseUnit, code: e.target.value })
+            }
+            placeholder="e.g., CS101"
+          />
+        </FormGroup>
+        <FormGroup label="Course Unit Name" labelFor="course-unit-name-input">
+          <InputGroup
+            id="course-unit-name-input"
+            value={newCourseUnit.name}
+            onChange={(e) =>
+              setNewCourseUnit({ ...newCourseUnit, name: e.target.value })
+            }
+            placeholder="e.g., Introduction to Programming"
+          />
+        </FormGroup>
+        <FormGroup label="Course" labelFor="course-unit-course-select">
+          <HTMLSelect
+            id="course-unit-course-select"
+            value={newCourseUnit.courseId}
+            onChange={(e) =>
+              setNewCourseUnit({ ...newCourseUnit, courseId: e.target.value })
+            }
+          >
+            <option value="">Select Course</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <Button intent={Intent.PRIMARY} onClick={handleCreateCourseUnit}>
+          Create Course Unit
+        </Button>
+      </Card>
+
+      <Card className="mb-4">
+        <H4>Create Timetable Entry</H4>
+        <FormGroup label="Semester" labelFor="timetable-semester-select">
+          <HTMLSelect
+            id="timetable-semester-select"
+            value={newTimetableEntry.semesterId}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                semesterId: Number(e.target.value),
+              })
+            }
+          >
+            <option value="">Select Semester</option>
+            {semesters.map((semester) => (
+              <option key={semester.id} value={semester.id}>
+                {semester.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Course Unit" labelFor="timetable-course-unit-select">
+          <HTMLSelect
+            id="timetable-course-unit-select"
+            value={newTimetableEntry.courseUnitId}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                courseUnitId: Number(e.target.value),
+              })
+            }
+          >
+            <option value="">Select Course Unit</option>
+            {courseUnits.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.code} - {unit.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Day" labelFor="timetable-day-select">
+          <HTMLSelect
+            id="timetable-day-select"
+            value={newTimetableEntry.day}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                day: e.target.value,
+              })
+            }
+          >
+            {daysOfWeek.map((day) => (
+              <option key={day} value={day}>
+                {day}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Start Time" labelFor="timetable-start-time-input">
+          <InputGroup
+            id="timetable-start-time-input"
+            type="time"
+            value={newTimetableEntry.startTime}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                startTime: e.target.value,
+              })
+            }
+          />
+        </FormGroup>
+        <FormGroup label="End Time" labelFor="timetable-end-time-input">
+          <InputGroup
+            id="timetable-end-time-input"
+            type="time"
+            value={newTimetableEntry.endTime}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                endTime: e.target.value,
+              })
+            }
+          />
+        </FormGroup>
+        <FormGroup label="Room" labelFor="timetable-room-input">
+          <InputGroup
+            id="timetable-room-input"
+            value={newTimetableEntry.room}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                room: e.target.value,
+              })
+            }
+            placeholder="e.g., Room 101"
+          />
+        </FormGroup>
+        <FormGroup label="Lecturer" labelFor="timetable-lecturer-select">
+          <HTMLSelect
+            id="timetable-lecturer-select"
+            value={newTimetableEntry.lecturerId}
+            onChange={(e) =>
+              setNewTimetableEntry({
+                ...newTimetableEntry,
+                lecturerId: Number(e.target.value),
+              })
+            }
+          >
+            <option value="">Select Lecturer</option>
+            {lecturers.map((lecturer) => (
+              <option key={lecturer.id} value={lecturer.id}>
+                {lecturer.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <Button intent={Intent.PRIMARY} onClick={handleCreateTimetableEntry}>
+          Create Timetable Entry
+        </Button>
+      </Card>
+    </div>
+  );
+};
+
+export default AdminTimetableManagement;
 
 ================================================================================
 
@@ -350,15 +1310,285 @@ export default FaceCapture;
 
 ================================================================================
 
+File: components\LecturerDashboard.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Elevation,
+  H3,
+  H4,
+  H5,
+  Tag,
+  Button,
+  Collapse,
+} from "@blueprintjs/core";
+import { useAtom } from "jotai";
+import { userAtom } from "../store/auth";
+import { Course, TimetableEntry } from "../timetable";
+import api from "../api/api";
+
+const daysOfWeek = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+const LecturerDashboard: React.FC = () => {
+  const [user] = useAtom(userAtom);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [currentDay] = useState<string>(daysOfWeek[new Date().getDay() - 1]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await api.get("/lecturer/timetable");
+        setCourses(response.data);
+      } catch (error) {
+        console.error("Error fetching timetable:", error);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  const hasLectureToday = (course: Course) => {
+    return course.timetableEntries.some((entry) => entry.day === currentDay);
+  };
+
+  return (
+    <div className="p-4">
+      <H3>Welcome, {user?.name}</H3>
+      <H4>Your Courses</H4>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        {courses.map((course) => (
+          <Card
+            key={course.id}
+            elevation={Elevation.TWO}
+            interactive={true}
+            onClick={() => setSelectedCourse(course)}
+          >
+            <H5>{course.name}</H5>
+            {hasLectureToday(course) && (
+              <Tag intent="primary">Lecture Today</Tag>
+            )}
+          </Card>
+        ))}
+      </div>
+      {selectedCourse && (
+        <CourseDetail course={selectedCourse} currentDay={currentDay} />
+      )}
+    </div>
+  );
+};
+
+interface CourseDetailProps {
+  course: Course;
+  currentDay: string;
+}
+
+const CourseDetail: React.FC<CourseDetailProps> = ({ course, currentDay }) => {
+  return (
+    <Card elevation={Elevation.TWO}>
+      <H4>{course.name} Timetable</H4>
+      <DayTimetable
+        entries={course.timetableEntries.filter(
+          (entry) => entry.day === currentDay
+        )}
+        day={currentDay}
+        isOpen={true}
+      />
+      {daysOfWeek
+        .filter((day) => day !== currentDay)
+        .map((day) => (
+          <DayTimetable
+            key={day}
+            entries={course.timetableEntries.filter(
+              (entry) => entry.day === day
+            )}
+            day={day}
+            isOpen={false}
+          />
+        ))}
+    </Card>
+  );
+};
+
+interface DayTimetableProps {
+  entries: TimetableEntry[];
+  day: string;
+  isOpen: boolean;
+}
+
+const DayTimetable: React.FC<DayTimetableProps> = ({
+  entries,
+  day,
+  isOpen,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(isOpen);
+  const isCurrentlyRunning = (entry: TimetableEntry) => {
+    const now = new Date();
+    const startTime = new Date();
+    const endTime = new Date();
+    const [startHour, startMinute] = entry.startTime.split(":");
+    const [endHour, endMinute] = entry.endTime.split(":");
+    startTime.setHours(parseInt(startHour), parseInt(startMinute));
+    endTime.setHours(parseInt(endHour), parseInt(endMinute));
+    return now >= startTime && now <= endTime;
+  };
+  return (
+    <Card className="mb-2">
+      <Button
+        fill
+        minimal
+        rightIcon={isExpanded ? "chevron-up" : "chevron-down"}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <H5>{day}</H5>
+      </Button>
+      <Collapse isOpen={isExpanded}>
+        {entries.length > 0 ? (
+          entries.map((entry) => (
+            <Card key={entry.id} className="mt-2">
+              <p>Course Unit: {entry.courseUnit.name}</p>
+              <p>
+                Time: {entry.startTime} - {entry.endTime}
+              </p>
+              <p>Room: {entry.room}</p>
+              {isCurrentlyRunning(entry) && (
+                <Tag intent="success">Currently Running</Tag>
+              )}
+            </Card>
+          ))
+        ) : (
+          <p>No lectures scheduled for this day.</p>
+        )}
+      </Collapse>
+    </Card>
+  );
+};
+
+export default LecturerDashboard;
+
+================================================================================
+
+File: components\LoadingSpinner.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { Spinner, SpinnerSize } from "@blueprintjs/core";
+
+const LoadingSpinner: React.FC = () => (
+  <div className="flex justify-center items-center h-full">
+    <Spinner size={SpinnerSize.LARGE} />
+  </div>
+);
+
+export default LoadingSpinner;
+
+================================================================================
+
+File: components\LoginForm.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { useSetAtom } from "jotai";
+import { useNavigate } from "react-router-dom";
+import { Button, FormGroup, InputGroup, Intent, Card } from "@blueprintjs/core";
+import { login } from "../api/api";
+import { userAtom, isAuthenticatedAtom } from "../store/auth";
+import { showToast } from "./Toaster";
+import LoadingSpinner from "./LoadingSpinner";
+
+const LoginForm: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const setUser = useSetAtom(userAtom);
+  const setIsAuthenticated = useSetAtom(isAuthenticatedAtom);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userData = await login(email, password);
+      setUser(userData);
+      setIsAuthenticated(true);
+      showToast("Logged in successfully", Intent.SUCCESS);
+
+      // Redirect based on user role
+      switch (userData.role) {
+        case "student":
+          navigate("/student/dashboard");
+          break;
+        case "lecturer":
+          navigate("/lecturer/dashboard");
+          break;
+        case "admin":
+          navigate("/admin/dashboard");
+          break;
+        default:
+          navigate("/");
+      }
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      console.log("Login failed:", error.response.data.msg);
+      showToast(
+        error ? error.response.data.msg : "Login failed. Please try again.",
+        Intent.DANGER
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  return (
+    <Card elevation={2} className="w-full max-w-md mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Login</h2>
+      <form onSubmit={handleSubmit}>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </FormGroup>
+        <Button
+          type="submit"
+          intent={Intent.PRIMARY}
+          text="Login"
+          className="w-full mt-4"
+          loading={isLoading}
+        />
+      </form>
+    </Card>
+  );
+};
+
+export default LoginForm;
+
+================================================================================
+
 File: components\Navbar.tsx
 --------------------------------------------------------------------------------
-// src/components/Navbar.tsx
-
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Navbar,
   Button,
+  Navbar,
   Alignment,
   Menu,
   MenuItem,
@@ -366,25 +1596,25 @@ import {
   Position,
 } from "@blueprintjs/core";
 import { useAtom } from "jotai";
-import { userAtom } from "../store/auth";
-import { logout } from "../services/auth";
+import { userAtom, isAuthenticatedAtom } from "../store/auth";
+import { showToast } from "./Toaster";
 
 const AppNavbar: React.FC = () => {
   const [user, setUser] = useAtom(userAtom);
+  const [, setIsAuthenticated] = useAtom(isAuthenticatedAtom);
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem("token");
     setUser(null);
+    setIsAuthenticated(false);
+    showToast("Logged out successfully", "success");
     navigate("/login");
   };
 
   const renderMenu = () => {
-    if (!user) {
-      return (
-        <Button icon="log-in" text="Login" onClick={() => navigate("/login")} />
-      );
-    }
+    if (!user) return undefined;
+    // console.log(user);
 
     let menuItems;
     switch (user.role) {
@@ -398,7 +1628,7 @@ const AppNavbar: React.FC = () => {
             />
             <MenuItem
               icon="calendar"
-              text="My Schedule"
+              text="Schedule"
               onClick={() => navigate("/student/schedule")}
             />
             <MenuItem
@@ -449,50 +1679,610 @@ const AppNavbar: React.FC = () => {
               onClick={() => navigate("/admin/approve-students")}
             />
             <MenuItem
-              icon="properties"
-              text="Manage Courses"
-              onClick={() => navigate("/admin/manage-courses")}
+              icon="new-person"
+              text="Register Admin"
+              onClick={() => navigate("/admin/register-admin")}
+            />
+            <MenuItem
+              icon="time"
+              text="Timetable Management"
+              onClick={() => navigate("/admin/timetable-management")}
             />
           </Menu>
         );
         break;
+      default:
+        menuItems = undefined;
     }
 
-    return (
+    return menuItems ? (
       <Popover content={menuItems} position={Position.BOTTOM_RIGHT}>
-        <Button icon="user" rightIcon="caret-down" text={user.name} />
+        <Button
+          icon="user"
+          rightIcon="caret-down"
+          text={`${user.name} (${user.role})`}
+          className="ml-2"
+        />
       </Popover>
-    );
+    ) : null;
   };
 
   return (
-    <Navbar>
-      <Navbar.Group align={Alignment.LEFT}>
-        <Navbar.Heading>Attendance System</Navbar.Heading>
+    <Navbar className="bp3-dark">
+      <Navbar.Group align={Alignment.LEFT} className="flex items-center">
+        <Navbar.Heading className="text-lg font-bold">
+          Attendance System
+        </Navbar.Heading>
         <Navbar.Divider />
-        <Button icon="home" text="Home" minimal onClick={() => navigate("/")} />
         <Button
-          icon="user"
-          text="Attendance Live"
+          icon="home"
+          text="Home"
           minimal
-          onClick={() => navigate("/live-attendance")}
+          onClick={() => navigate("/")}
+          className="bp3-minimal"
         />
         <Button
-          icon="add"
-          text="Register"
+          icon="camera"
+          text="Student Portal"
           minimal
-          onClick={() => navigate("/register")}
+          onClick={() => navigate("/student-portal")}
+          className="bp3-minimal"
         />
       </Navbar.Group>
-      <Navbar.Group align={Alignment.RIGHT}>
-        {renderMenu()}
-        {user && <Button icon="log-out" text="Logout" onClick={handleLogout} />}
+      <Navbar.Group align={Alignment.RIGHT} className="flex items-center">
+        {user ? (
+          <>
+            {renderMenu()}
+            <Button
+              icon="log-out"
+              text="Logout"
+              minimal
+              onClick={handleLogout}
+              className="bp3-minimal"
+            />
+          </>
+        ) : (
+          <>
+            <Button
+              icon="log-in"
+              text="Login"
+              minimal
+              onClick={() => navigate("/login")}
+              className="bp3-minimal"
+            />
+            <Button
+              icon="new-person"
+              text="Register"
+              minimal
+              onClick={() => navigate("/register")}
+              className="bp3-minimal"
+            />
+          </>
+        )}
       </Navbar.Group>
     </Navbar>
   );
 };
 
 export default AppNavbar;
+
+================================================================================
+
+File: components\PageNotFound.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { Callout, Intent } from "@blueprintjs/core";
+
+const PageNotFound: React.FC = () => {
+  return (
+    <Callout intent={Intent.DANGER} title="Page Not Found" className="mt-4">
+      Oops! The page you are looking for does not exist.
+    </Callout>
+  );
+};
+
+export default PageNotFound;
+
+================================================================================
+
+File: components\RegsitrationForm.tsx
+--------------------------------------------------------------------------------
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  FormGroup,
+  InputGroup,
+  Button,
+  HTMLSelect,
+  Intent,
+} from "@blueprintjs/core";
+import { useNavigate } from "react-router-dom";
+import api, { register } from "../api/api";
+import FaceCapture from "./FaceCapture";
+import { showToast } from "./Toaster";
+
+interface AcademicYear {
+  id: number;
+  year: string;
+}
+
+interface Semester {
+  id: number;
+  name: string;
+}
+
+interface College {
+  id: number;
+  name: string;
+}
+
+interface Course {
+  id: number;
+  code: string;
+  name: string;
+}
+
+const RegistrationForm: React.FC = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    academic_year_id: "",
+    semester_id: "",
+    college_id: "",
+    course_id: "",
+    student_id: "",
+    role: "student",
+  });
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    fetchOptions();
+  }, []);
+
+  const fetchOptions = async () => {
+    try {
+      const [yearsRes, semestersRes, collegesRes, coursesRes] =
+        await Promise.all([
+          api.get("/academic-years"),
+          api.get("/semesters"),
+          api.get("/colleges"),
+          api.get("/courses"),
+        ]);
+      setAcademicYears(yearsRes.data);
+      setSemesters(semestersRes.data);
+      setColleges(collegesRes.data);
+      setCourses(coursesRes.data);
+    } catch (error) {
+      console.error("Error fetching options:", error);
+      showToast("Error fetching options", Intent.DANGER);
+    }
+  };
+
+  const [faceImages, setFaceImages] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = event.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userData = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        userData.append(key, value.toString());
+      });
+      faceImages.forEach((image, index) => {
+        userData.append(`faceImage${index}`, image);
+      });
+
+      console.log("Sending data:", Object.fromEntries(userData));
+
+      await register(userData);
+
+      showToast("Registration successful. Please login.", Intent.SUCCESS);
+    } catch (error) {
+      console.error("Registration failed:", error);
+      showToast("Registration failed. Please try again later.", Intent.DANGER);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card elevation={2} className="registration-form">
+      <h2>Student Registration</h2>
+      <form onSubmit={handleSubmit}>
+        <FormGroup label="Name" labelFor="name-input">
+          <InputGroup
+            id="name-input"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Student ID" labelFor="studentId-input">
+          <InputGroup
+            id="studentId-input"
+            name="student_id"
+            value={formData.student_id}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Academic Year" labelFor="academicYear-select">
+          <HTMLSelect
+            id="academicYear-select"
+            name="academic_year_id"
+            value={formData.academic_year_id}
+            onChange={handleInputChange}
+            required
+          >
+            <option value="">Select Academic Year</option>
+            {academicYears.map((year) => (
+              <option key={year.id} value={year.id}>
+                {year.year}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Semester" labelFor="semester-select">
+          <HTMLSelect
+            id="semester-select"
+            name="semester_id"
+            value={formData.semester_id}
+            onChange={handleInputChange}
+            required
+          >
+            <option value="">Select Semester</option>
+            {semesters.map((semester) => (
+              <option key={semester.id} value={semester.id}>
+                {semester.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="College" labelFor="college-select">
+          <HTMLSelect
+            id="college-select"
+            name="college_id"
+            value={formData.college_id}
+            onChange={handleInputChange}
+            required
+          >
+            <option value="">Select College</option>
+            {colleges.map((college) => (
+              <option key={college.id} value={college.id}>
+                {college.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Course" labelFor="course-select">
+          <HTMLSelect
+            id="course-select"
+            name="course_id"
+            value={formData.course_id}
+            onChange={handleInputChange}
+            required
+          >
+            <option value="">Select Course</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.code} - {course.name}
+              </option>
+            ))}
+          </HTMLSelect>
+        </FormGroup>
+        <FormGroup label="Capture Image" labelFor="image-capture">
+          <FaceCapture onCapture={setFaceImages} />
+        </FormGroup>
+        <Button
+          type="submit"
+          intent={Intent.PRIMARY}
+          text="Register"
+          className="w-full mt-4"
+          loading={isLoading}
+        />
+      </form>
+    </Card>
+  );
+};
+
+export default RegistrationForm;
+
+================================================================================
+
+File: components\StudentDashboard.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { Card, Callout, H3, H5, Tag } from "@blueprintjs/core";
+import { useAtom } from "jotai";
+import { userAtom } from "../store/auth";
+
+const StudentDashboard: React.FC = () => {
+  const [user] = useAtom(userAtom);
+
+  return (
+    <div className="p-4">
+      <Callout intent="warning" title="Under Development">
+        This dashboard is currently under development. More features will be
+        added soon.
+      </Callout>
+      <Card className="mt-4">
+        <H3>Welcome, {user?.name}</H3>
+        <H5>Student Information</H5>
+        <p>Email: {user?.email}</p>
+        <p>
+          Role: <Tag intent="primary">{user?.role}</Tag>
+        </p>
+        {/* Add more student-specific information here */}
+      </Card>
+    </div>
+  );
+};
+
+export default StudentDashboard;
+
+================================================================================
+
+File: components\StudentViewPortal.tsx
+--------------------------------------------------------------------------------
+import React from "react";
+import { Card, Callout, H3, Button } from "@blueprintjs/core";
+
+const StudentViewPortal: React.FC = () => {
+  return (
+    <div className="p-4">
+      <Callout intent="warning" title="Under Development">
+        This portal is a placeholder for the IoT device interface. It will be
+        used to capture student attendance.
+      </Callout>
+      <Card className="mt-4">
+        <H3>Student Attendance Portal</H3>
+        <p>This page will contain:</p>
+        <ul>
+          <li>A camera feed for facial recognition</li>
+          <li>Real-time attendance status updates</li>
+          <li>Quick check-in/check-out options</li>
+        </ul>
+        <Button intent="primary" text="Simulate Check-In" className="mr-2" />
+        <Button intent="danger" text="Simulate Check-Out" />
+      </Card>
+    </div>
+  );
+};
+
+export default StudentViewPortal;
+
+================================================================================
+
+File: components\TeacherRegistrationForm.tsx
+--------------------------------------------------------------------------------
+import React, { useState } from "react";
+import { Button, FormGroup, InputGroup, Intent, Card } from "@blueprintjs/core";
+import { register } from "../api/api";
+import { showToast } from "./Toaster";
+import FaceCapture from "./FaceCapture";
+
+const RegistrationForm: React.FC = () => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    role: "student",
+    name: "",
+    student_Id: "",
+    year: "",
+    academic_year: "",
+    unit: "",
+    group: "",
+    semester: "",
+  });
+
+  const [faceImages, setFaceImages] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userData = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        userData.append(key, value);
+      });
+      faceImages.forEach((image, index) => {
+        userData.append(`faceImage${index}`, image);
+      });
+
+      await register(userData);
+
+      showToast("Registration successful. Please login.", Intent.SUCCESS);
+    } catch (error) {
+      console.error("Registration failed:", error);
+      showToast("Registration failed. Please try again later.", Intent.DANGER);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card elevation={2} className="w-full max-w-md mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Register</h2>
+      <form onSubmit={handleSubmit}>
+        <FormGroup label="Email" labelFor="email-input">
+          <InputGroup
+            id="email-input"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Password" labelFor="password-input">
+          <InputGroup
+            id="password-input"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup label="Role" labelFor="role-select">
+          <select
+            id="role-select"
+            name="role"
+            value={formData.role}
+            onChange={handleInputChange}
+            className="w-full p-2 border rounded"
+          >
+            <option value="student">Student</option>
+            <option value="lecturer">Lecturer</option>
+          </select>
+        </FormGroup>
+        <FormGroup label="Name" labelFor="name-input">
+          <InputGroup
+            id="name-input"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </FormGroup>
+        {formData.role === "student" && (
+          <>
+            <FormGroup label="Student ID" labelFor="studentId-input">
+              <InputGroup
+                id="studentId-input"
+                name="studentId"
+                value={formData.student_Id}
+                onChange={handleInputChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup label="Year" labelFor="year-input">
+              <InputGroup
+                id="year-input"
+                name="year"
+                type="number"
+                value={formData.year}
+                onChange={handleInputChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup label="Academic Year" labelFor="academicYear-input">
+              <InputGroup
+                id="academicYear-input"
+                name="academicYear"
+                value={formData.academic_year}
+                onChange={handleInputChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup label="Unit" labelFor="unit-input">
+              <InputGroup
+                id="unit-input"
+                name="unit"
+                value={formData.unit}
+                onChange={handleInputChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup label="Group" labelFor="group-input">
+              <InputGroup
+                id="group-input"
+                name="group"
+                value={formData.group}
+                onChange={handleInputChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup label="Semester" labelFor="semester-input">
+              <InputGroup
+                id="semester-input"
+                name="semester"
+                value={formData.semester}
+                onChange={handleInputChange}
+                required
+              />
+            </FormGroup>
+            <FormGroup label="Face Images" labelFor="faceImages-input">
+              {/* <input
+                id="faceImages-input"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                required
+              /> */}
+              <FaceCapture onCapture={setFaceImages} />
+            </FormGroup>
+          </>
+        )}
+        <Button
+          type="submit"
+          intent={Intent.PRIMARY}
+          text="Register"
+          className="w-full mt-4"
+          loading={isLoading}
+        />
+      </form>
+    </Card>
+  );
+};
+
+export default RegistrationForm;
+
+================================================================================
+
+File: components\Toaster.ts
+--------------------------------------------------------------------------------
+import { Position, Toaster, Intent } from "@blueprintjs/core";
+
+export const AppToaster = Toaster.create({
+  className: "recipe-toaster",
+  position: Position.TOP,
+});
+
+export const showToast = (message: string, intent: Intent = Intent.PRIMARY) => {
+  AppToaster.show({ message, intent });
+};
 
 ================================================================================
 
@@ -3110,18 +4900,21 @@ export const logout = () => {
 
 File: store\auth.ts
 --------------------------------------------------------------------------------
-// src/store/auth.ts
-
 import { atom } from "jotai";
+import { jwtDecode } from "jwt-decode";
 
 export interface User {
   id: string;
   name: string;
+  email: string;
   role: "student" | "lecturer" | "admin";
-  access_token: string; // Changed from 'token' to 'access_token' to match the API response
 }
 
-export const userAtom = atom<User | null>(null);
+const token = localStorage.getItem("token");
+const initialUser = token ? (jwtDecode(token) as User) : null;
+
+export const userAtom = atom<User | null>(initialUser);
+export const isAuthenticatedAtom = atom<boolean>(!!initialUser);
 
 ================================================================================
 

@@ -8,14 +8,17 @@ import {
   MenuItem,
   Popover,
   Position,
+  Tag,
 } from "@blueprintjs/core";
 import { useAtom } from "jotai";
-import { userAtom, isAuthenticatedAtom } from "../store/auth";
+import { userAtom, isAuthenticatedAtom, darkModeAtom } from "../store/auth";
 import { showToast } from "./Toaster";
 
 const AppNavbar: React.FC = () => {
   const [user, setUser] = useAtom(userAtom);
   const [, setIsAuthenticated] = useAtom(isAuthenticatedAtom);
+  const [isDarkMode, setIsDarkMode] = useAtom(darkModeAtom);
+
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -25,6 +28,34 @@ const AppNavbar: React.FC = () => {
     showToast("Logged out successfully", "success");
     navigate("/login");
   };
+
+  const registrationMenu = (
+    <Menu>
+      <MenuItem
+        icon="new-person"
+        text="Register Student"
+        // onClick={() => navigate("/admin/register-student")}
+        onClick={() => navigate("/register")}
+      />
+      <MenuItem
+        icon="new-person"
+        text="Register Lecturer"
+        onClick={() => navigate("/admin/register-lecturer")}
+      />
+      <MenuItem
+        icon="new-person"
+        text={
+          <span>
+            Register Admin{" "}
+            <Tag minimal intent="warning">
+              Temporary
+            </Tag>
+          </span>
+        }
+        onClick={() => navigate("/admin/register-admin")}
+      />
+    </Menu>
+  );
 
   const renderMenu = () => {
     if (!user) return undefined;
@@ -40,7 +71,7 @@ const AppNavbar: React.FC = () => {
               text="Dashboard"
               onClick={() => navigate("/student/dashboard")}
             />
-            <MenuItem
+            {/* <MenuItem
               icon="calendar"
               text="Schedule"
               onClick={() => navigate("/student/schedule")}
@@ -49,7 +80,7 @@ const AppNavbar: React.FC = () => {
               icon="chart"
               text="Attendance Report"
               onClick={() => navigate("/student/attendance")}
-            />
+            /> */}
           </Menu>
         );
         break;
@@ -84,7 +115,7 @@ const AppNavbar: React.FC = () => {
             />
             <MenuItem
               icon="new-person"
-              text="Register User"
+              text="Register Student"
               onClick={() => navigate("/admin/register")}
             />
             <MenuItem
@@ -98,8 +129,22 @@ const AppNavbar: React.FC = () => {
               onClick={() => navigate("/admin/register-admin")}
             />
             <MenuItem
+              icon="people"
+              text="Register Lecturer"
+              onClick={() => navigate("/admin/register-lecturer")}
+            />
+            <MenuItem
               icon="time"
-              text="Timetable Management"
+              // Tag with intent warning to indicate temporary feature
+              // text="Timetable Management"
+              text={
+                <span className="flex flex-col">
+                  Timetable Management{" "}
+                  <Tag minimal intent="danger">
+                    Under Construction
+                  </Tag>
+                </span>
+              }
               onClick={() => navigate("/admin/timetable-management")}
             />
           </Menu>
@@ -114,7 +159,11 @@ const AppNavbar: React.FC = () => {
         <Button
           icon="user"
           rightIcon="caret-down"
-          text={`${user.name} (${user.role})`}
+          text={
+            <span>
+              {user.name} <Tag intent="primary">{user.role}</Tag>
+            </span>
+          }
           className="ml-2"
         />
       </Popover>
@@ -128,13 +177,13 @@ const AppNavbar: React.FC = () => {
           Attendance System
         </Navbar.Heading>
         <Navbar.Divider />
-        <Button
+        {/* <Button
           icon="home"
           text="Home"
           minimal
           onClick={() => navigate("/")}
           className="bp3-minimal"
-        />
+        /> */}
         <Button
           icon="camera"
           text="Student Portal"
@@ -143,7 +192,7 @@ const AppNavbar: React.FC = () => {
           className="bp3-minimal"
         />
       </Navbar.Group>
-      <Navbar.Group align={Alignment.RIGHT} className="flex items-center">
+      <Navbar.Group align={Alignment.RIGHT} className="flex items-center gap-1">
         {user ? (
           <>
             {renderMenu()}
@@ -164,15 +213,33 @@ const AppNavbar: React.FC = () => {
               onClick={() => navigate("/login")}
               className="bp3-minimal"
             />
-            <Button
+            {/* <Button
               icon="new-person"
               text="Register"
               minimal
               onClick={() => navigate("/register")}
               className="bp3-minimal"
-            />
+            /> */}
+
+            <Popover
+              content={registrationMenu}
+              position={Position.BOTTOM_RIGHT}
+            >
+              <Button
+                icon="new-person"
+                text="Register"
+                // minimal
+                rightIcon="caret-down"
+                className="bp3-minimal"
+              />
+            </Popover>
           </>
         )}
+        <Button
+          icon={isDarkMode ? "flash" : "moon"}
+          intent="none"
+          onClick={() => setIsDarkMode((prev) => !prev)}
+        />
       </Navbar.Group>
     </Navbar>
   );

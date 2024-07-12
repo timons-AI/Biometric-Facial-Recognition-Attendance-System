@@ -18,6 +18,7 @@ import AdminRegistration from "./components/AdminRegistrationForm";
 import StudentViewPortal from "./components/StudentViewPortal";
 import PageNotFound from "./components/PageNotFound";
 import AdminTimetableManagement from "./components/AdminTimeTableMgt";
+import LecturerRegistration from "./components/LecturerRegistration";
 
 const App: React.FC = () => {
   const [isAuthenticated] = useAtom(isAuthenticatedAtom);
@@ -80,17 +81,12 @@ const App: React.FC = () => {
               />
             }
           />
-          {/* <Route
-            path="/admin/register-admin"
-            element={
-              <PrivateRoute
-                element={<AdminRegistration />}
-                allowedRoles={["admin"]}
-              />
-            }
-          /> */}
 
           <Route path="/admin/register-admin" element={<AdminRegistration />} />
+          <Route
+            path="/admin/register-lecturer"
+            element={<LecturerRegistration />}
+          />
           <Route
             path="/admin/timetable-management"
             element={
