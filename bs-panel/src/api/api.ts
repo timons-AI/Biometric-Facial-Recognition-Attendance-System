@@ -3,16 +3,30 @@ import { jwtDecode } from "jwt-decode";
 import { Course } from "../timetable";
 import { PaginatedResponse } from "../components/AdminApproval";
 
-const API_URL = "http://localhost:5000/api";
-//  https://421e-41-210-141-191.ngrok-free.app/api
-// const API_URL = "https://421e-41-210-141-191.ngrok-free.app/api";
+// const API_URL = "http://localhost:5000/api";
+// //  https://421e-41-210-141-191.ngrok-free.app/api
+// // const API_URL = "https://421e-41-210-141-191.ngrok-free.app/api";
+// https://583a-41-210-141-191.ngrok-free.app/
+
+// const api = axios.create({
+//   baseURL: API_URL,
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+// });
+
+const API_URL = "https://583a-41-210-141-191.ngrok-free.app/api"; // Use the ngrok URL
+// const API_URL = "http://localhost:5000/api"; // Commented out the localhost URL
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   },
 });
+
+export default api;
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -105,6 +119,3 @@ export const getLecturerTimetable = async (): Promise<Course[]> => {
   const response = await api.get("/api/lecturer/timetable");
   return response.data;
 };
-
-// export the api
-export default api;

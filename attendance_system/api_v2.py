@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 from claude_face_recognition import FaceRecognition
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["*","https://be71-41-210-154-105.ngrok-free.app"], "allow_headers": ["Content-Type", "Authorization"]}})
+CORS(app, resources={r"/api/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"]}})
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://laravel_user:laravel_user@localhost/attendance_system_v1'
