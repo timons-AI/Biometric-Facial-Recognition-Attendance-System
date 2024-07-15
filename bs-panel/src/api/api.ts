@@ -15,8 +15,7 @@ import { PaginatedResponse } from "../components/AdminApproval";
 //   },
 // });
 
-const API_URL = "https://583a-41-210-141-191.ngrok-free.app/api"; // Use the ngrok URL
-// const API_URL = "http://localhost:5000/api"; // Commented out the localhost URL
+const API_URL = "https://eee7-129-205-1-137.ngrok-free.app/api"; // Use the ngrok URL
 
 const api = axios.create({
   baseURL: API_URL,

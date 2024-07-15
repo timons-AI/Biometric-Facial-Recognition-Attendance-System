@@ -193,7 +193,7 @@ class FaceRecognition:
         
         return True
 
-    def recognize_face(self, input_embedding, stored_embeddings, threshold=0.7):  # Adjusted threshold
+    def recognize_face(self, input_embedding, stored_embeddings, threshold=0.5):  # Adjusted threshold: a lower value means more strict recognition and vice versa
         if not stored_embeddings:
             return False, float('inf')
         

@@ -1,0 +1,100 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Face Recognition Comparison</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+      #video-container {
+        display: flex;
+        justify-content: center;
+      }
+      #results {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Face Recognition Comparison</h1>
+    <div id="video-container">
+      <video id="video" width="640" height="480" autoplay></video>
+    </div>
+    <div>
+      <button id="register-btn">Register Face</button>
+      <input type="text" id="name-input" placeholder="Enter name" />
+    </div>
+    <div id="results"></div>
+
+    <script>
+      const socket = io();
+      const video = document.getElementById("video");
+      const registerBtn = document.getElementById("register-btn");
+      const nameInput = document.getElementById("name-input");
+      const results = document.getElementById("results");
+
+      // Access webcam
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((err) => console.error("Error accessing webcam:", err));
+
+      // Register face
+      registerBtn.addEventListener("click", () => {
+        const name = nameInput.value.trim();
+        if (name) {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+          const imageData = canvas.toDataURL("image/jpeg");
+          socket.emit("register", { name, image: imageData });
+        } else {
+          alert("Please enter a name");
+        }
+      });
+
+      // Verify face every 3 seconds
+      setInterval(() => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL("image/jpeg");
+        socket.emit("verify", { image: imageData });
+      }, 3000);
+
+      // Handle registration result
+      socket.on("registration_result", (data) => {
+        if (data.success) {
+          alert(`Successfully registered ${data.name}`);
+        } else {
+          alert(`Failed to register ${data.name}`);
+        }
+      });
+
+      // Handle verification result
+      socket.on("verification_result", (data) => {
+        if (data.name !== "Unknown") {
+          results.innerHTML = `
+                    <p>Name: ${data.name}</p>
+                    <p>Current Implementation: ${data.current_distance.toFixed(
+                      4
+                    )}</p>
+                    <p>DeepFace: ${data.deepface_distance.toFixed(4)}</p>
+                    <p>Processing Time: ${data.time.toFixed(2)}ms</p>
+                `;
+        } else {
+          results.innerHTML = "<p>No face detected or recognized</p>";
+        }
+      });
+    </script>
+  </body>
+</html>

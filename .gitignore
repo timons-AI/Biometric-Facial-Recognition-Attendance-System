@@ -1,2 +1,5 @@
 c
 node_modules
+# ignore extracted_files directory and its contents
+extracted_files/
+# ignore all files with .txt extension
