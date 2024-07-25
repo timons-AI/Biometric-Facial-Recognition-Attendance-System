@@ -32,7 +32,7 @@ from claude_face_recognition import FaceRecognition
 
 app = Flask(__name__)
 # CORS(app, resources={r"/api/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"]}})
-CORS(app, resources={r"/api/*": {"origins": ["*","https://a5fd-129-205-1-137.ngrok-free.app","https://biometric-facial-recognition-attendance-system.vercel.app"], "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning"], "methods": ["GET", "POST", "PUT", "DELETE"]}})
+CORS(app, resources={r"/api/*": {"origins": ["*","https://7384-129-205-1-137.ngrok-free.app","https://biometric-facial-recognition-attendance-system.vercel.app"], "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning"], "methods": ["GET", "POST", "PUT", "DELETE"]}})
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://laravel_user:laravel_user@localhost/attendance_system_v1'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
