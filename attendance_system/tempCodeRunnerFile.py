@@ -1,1 +1,1 @@
-def c
+/colleges

@@ -1,0 +1,362 @@
+[
+  {
+    "id": 1,
+    "name": "Joseph Anderson",
+    "email": "patrick60@example.com",
+    "college_id": 2,
+    "years_experience": 3,
+    "rating": 4.9
+  },
+  {
+    "id": 2,
+    "name": "Kevin Garrett",
+    "email": "munozkaren@example.org",
+    "college_id": 1,
+    "years_experience": 9,
+    "rating": 4.1
+  },
+  {
+    "id": 3,
+    "name": "John Jordan",
+    "email": "smcpherson@example.net",
+    "college_id": 3,
+    "years_experience": 19,
+    "rating": 3.6
+  },
+  {
+    "id": 4,
+    "name": "Diane Ellis",
+    "email": "qkaiser@example.net",
+    "college_id": 3,
+    "years_experience": 4,
+    "rating": 3.1
+  },
+  {
+    "id": 5,
+    "name": "Mark Klein",
+    "email": "zgalloway@example.org",
+    "college_id": 4,
+    "years_experience": 11,
+    "rating": 4.6
+  },
+  {
+    "id": 6,
+    "name": "Lauren Maldonado",
+    "email": "michelle07@example.org",
+    "college_id": 1,
+    "years_experience": 2,
+    "rating": 3.7
+  },
+  {
+    "id": 7,
+    "name": "John Nelson",
+    "email": "kathyhicks@example.com",
+    "college_id": 3,
+    "years_experience": 17,
+    "rating": 4.2
+  },
+  {
+    "id": 8,
+    "name": "Erica Leonard",
+    "email": "david65@example.org",
+    "college_id": 2,
+    "years_experience": 11,
+    "rating": 4.7
+  },
+  {
+    "id": 9,
+    "name": "Holly Burgess",
+    "email": "sanchezashley@example.org",
+    "college_id": 2,
+    "years_experience": 13,
+    "rating": 3.3
+  },
+  {
+    "id": 10,
+    "name": "Sharon Hamilton",
+    "email": "robinsonjames@example.org",
+    "college_id": 3,
+    "years_experience": 3,
+    "rating": 3.5
+  },
+  {
+    "id": 11,
+    "name": "Vanessa Lewis",
+    "email": "sarahmartin@example.net",
+    "college_id": 1,
+    "years_experience": 16,
+    "rating": 4.6
+  },
+  {
+    "id": 12,
+    "name": "Christopher Gross",
+    "email": "garrett81@example.net",
+    "college_id": 4,
+    "years_experience": 16,
+    "rating": 4.2
+  },
+  {
+    "id": 13,
+    "name": "Kristen Richardson",
+    "email": "hestercassidy@example.com",
+    "college_id": 4,
+    "years_experience": 18,
+    "rating": 3.1
+  },
+  {
+    "id": 14,
+    "name": "Elizabeth Lopez",
+    "email": "udavis@example.org",
+    "college_id": 1,
+    "years_experience": 11,
+    "rating": 4.0
+  },
+  {
+    "id": 15,
+    "name": "William Walker",
+    "email": "kaylaroberts@example.net",
+    "college_id": 1,
+    "years_experience": 7,
+    "rating": 4.5
+  },
+  {
+    "id": 16,
+    "name": "Donna Nguyen",
+    "email": "tricia48@example.org",
+    "college_id": 1,
+    "years_experience": 16,
+    "rating": 3.9
+  },
+  {
+    "id": 17,
+    "name": "Jeffrey Dougherty",
+    "email": "walkernancy@example.org",
+    "college_id": 1,
+    "years_experience": 12,
+    "rating": 3.6
+  },
+  {
+    "id": 18,
+    "name": "Lauren Foster",
+    "email": "kevin50@example.org",
+    "college_id": 2,
+    "years_experience": 18,
+    "rating": 3.6
+  },
+  {
+    "id": 19,
+    "name": "Erica Grimes",
+    "email": "ecraig@example.org",
+    "college_id": 1,
+    "years_experience": 18,
+    "rating": 3.5
+  },
+  {
+    "id": 20,
+    "name": "Sean Rodriguez",
+    "email": "gordonjustin@example.com",
+    "college_id": 4,
+    "years_experience": 18,
+    "rating": 3.1
+  },
+  {
+    "id": 21,
+    "name": "John Phillips",
+    "email": "zjacobs@example.com",
+    "college_id": 3,
+    "years_experience": 13,
+    "rating": 3.9
+  },
+  {
+    "id": 22,
+    "name": "Patrick Miller",
+    "email": "amanda12@example.com",
+    "college_id": 4,
+    "years_experience": 15,
+    "rating": 4.8
+  },
+  {
+    "id": 23,
+    "name": "Jennifer Trujillo",
+    "email": "imunoz@example.org",
+    "college_id": 1,
+    "years_experience": 1,
+    "rating": 4.3
+  },
+  {
+    "id": 24,
+    "name": "Jamie Wheeler",
+    "email": "danielstephen@example.org",
+    "college_id": 4,
+    "years_experience": 9,
+    "rating": 4.3
+  },
+  {
+    "id": 25,
+    "name": "Diana Chavez",
+    "email": "elizabeth58@example.org",
+    "college_id": 4,
+    "years_experience": 11,
+    "rating": 3.5
+  },
+  {
+    "id": 26,
+    "name": "Daniel Diaz",
+    "email": "npowell@example.com",
+    "college_id": 3,
+    "years_experience": 11,
+    "rating": 4.4
+  },
+  {
+    "id": 27,
+    "name": "Curtis Davis",
+    "email": "anthony59@example.com",
+    "college_id": 1,
+    "years_experience": 10,
+    "rating": 3.8
+  },
+  {
+    "id": 28,
+    "name": "Michael Wheeler",
+    "email": "edwardadams@example.net",
+    "college_id": 1,
+    "years_experience": 15,
+    "rating": 3.7
+  },
+  {
+    "id": 29,
+    "name": "Kaylee Wade",
+    "email": "munozbrian@example.net",
+    "college_id": 4,
+    "years_experience": 2,
+    "rating": 3.9
+  },
+  {
+    "id": 30,
+    "name": "Joshua Young",
+    "email": "choichristopher@example.org",
+    "college_id": 3,
+    "years_experience": 4,
+    "rating": 5.0
+  },
+  {
+    "id": 31,
+    "name": "Lynn Johnson",
+    "email": "griffiththomas@example.org",
+    "college_id": 1,
+    "years_experience": 15,
+    "rating": 3.4
+  },
+  {
+    "id": 32,
+    "name": "Jacqueline Perez",
+    "email": "david63@example.com",
+    "college_id": 2,
+    "years_experience": 12,
+    "rating": 3.5
+  },
+  {
+    "id": 33,
+    "name": "Shelby Wright",
+    "email": "mwhite@example.com",
+    "college_id": 2,
+    "years_experience": 18,
+    "rating": 4.9
+  },
+  {
+    "id": 34,
+    "name": "Lisa Coleman",
+    "email": "ghall@example.org",
+    "college_id": 3,
+    "years_experience": 14,
+    "rating": 4.7
+  },
+  {
+    "id": 35,
+    "name": "Barbara Hardy",
+    "email": "rnolan@example.org",
+    "college_id": 2,
+    "years_experience": 9,
+    "rating": 3.0
+  },
+  {
+    "id": 36,
+    "name": "Hunter Morgan",
+    "email": "egarcia@example.org",
+    "college_id": 1,
+    "years_experience": 9,
+    "rating": 3.3
+  },
+  {
+    "id": 37,
+    "name": "Mrs. Sarah Collins",
+    "email": "washingtontammy@example.com",
+    "college_id": 1,
+    "years_experience": 9,
+    "rating": 4.4
+  },
+  {
+    "id": 38,
+    "name": "Eric Murray",
+    "email": "allen46@example.net",
+    "college_id": 2,
+    "years_experience": 7,
+    "rating": 5.0
+  },
+  {
+    "id": 39,
+    "name": "Cynthia Simpson",
+    "email": "brian26@example.net",
+    "college_id": 2,
+    "years_experience": 2,
+    "rating": 4.3
+  },
+  {
+    "id": 40,
+    "name": "Hannah Clark",
+    "email": "deborah14@example.com",
+    "college_id": 4,
+    "years_experience": 17,
+    "rating": 3.3
+  },
+  {
+    "id": 41,
+    "name": "Garrett Oneill",
+    "email": "daniel13@example.org",
+    "college_id": 4,
+    "years_experience": 5,
+    "rating": 3.7
+  },
+  {
+    "id": 42,
+    "name": "Ian Nguyen",
+    "email": "jacob74@example.org",
+    "college_id": 2,
+    "years_experience": 7,
+    "rating": 3.5
+  },
+  {
+    "id": 43,
+    "name": "Zachary Brown",
+    "email": "anthony19@example.com",
+    "college_id": 1,
+    "years_experience": 18,
+    "rating": 4.1
+  },
+  {
+    "id": 44,
+    "name": "Lori Berger",
+    "email": "rebeccamolina@example.net",
+    "college_id": 2,
+    "years_experience": 12,
+    "rating": 3.3
+  },
+  {
+    "id": 45,
+    "name": "Jacob Rios",
+    "email": "smcintosh@example.net",
+    "college_id": 1,
+    "years_experience": 10,
+    "rating": 3.3
+  }
+]

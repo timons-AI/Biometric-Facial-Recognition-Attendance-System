@@ -1,0 +1,194 @@
+[
+  {
+    "id": 1,
+    "name": "Managed logistical paradigm",
+    "code": "CRS1001",
+    "college_id": 3,
+    "credit_hours": 5,
+    "popularity": 0.9207146370458283
+  },
+  {
+    "id": 2,
+    "name": "Upgradable fault-tolerant capability",
+    "code": "CRS1002",
+    "college_id": 2,
+    "credit_hours": 3,
+    "popularity": 0.6241787502442575
+  },
+  {
+    "id": 3,
+    "name": "Inverse zero-defect superstructure",
+    "code": "CRS1003",
+    "college_id": 2,
+    "credit_hours": 4,
+    "popularity": 0.9377712680569735
+  },
+  {
+    "id": 4,
+    "name": "Adaptive coherent circuit",
+    "code": "CRS1004",
+    "college_id": 4,
+    "credit_hours": 4,
+    "popularity": 0.8906101835707434
+  },
+  {
+    "id": 5,
+    "name": "Function-based global strategy",
+    "code": "CRS1005",
+    "college_id": 2,
+    "credit_hours": 5,
+    "popularity": 0.7811643299899483
+  },
+  {
+    "id": 6,
+    "name": "Proactive national task-force",
+    "code": "CRS1006",
+    "college_id": 1,
+    "credit_hours": 5,
+    "popularity": 0.732319796130009
+  },
+  {
+    "id": 7,
+    "name": "Visionary empowering archive",
+    "code": "CRS1007",
+    "college_id": 4,
+    "credit_hours": 5,
+    "popularity": 0.6044592905298333
+  },
+  {
+    "id": 8,
+    "name": "Balanced dynamic hierarchy",
+    "code": "CRS1008",
+    "college_id": 2,
+    "credit_hours": 5,
+    "popularity": 0.8623642054122793
+  },
+  {
+    "id": 9,
+    "name": "Upgradable regional project",
+    "code": "CRS1009",
+    "college_id": 3,
+    "credit_hours": 5,
+    "popularity": 0.6499508395770917
+  },
+  {
+    "id": 10,
+    "name": "Multi-tiered object-oriented throughput",
+    "code": "CRS1010",
+    "college_id": 1,
+    "credit_hours": 3,
+    "popularity": 0.8709057136608183
+  },
+  {
+    "id": 11,
+    "name": "Integrated modular productivity",
+    "code": "CRS1011",
+    "college_id": 2,
+    "credit_hours": 5,
+    "popularity": 0.5697508525013046
+  },
+  {
+    "id": 12,
+    "name": "User-friendly grid-enabled website",
+    "code": "CRS1012",
+    "college_id": 3,
+    "credit_hours": 3,
+    "popularity": 0.6324871417843804
+  },
+  {
+    "id": 13,
+    "name": "Organic needs-based info-mediaries",
+    "code": "CRS1013",
+    "college_id": 1,
+    "credit_hours": 5,
+    "popularity": 0.6091624981412309
+  },
+  {
+    "id": 14,
+    "name": "Visionary bandwidth-monitored task-force",
+    "code": "CRS1014",
+    "college_id": 4,
+    "credit_hours": 3,
+    "popularity": 0.8549679182252714
+  },
+  {
+    "id": 15,
+    "name": "Robust empowering circuit",
+    "code": "CRS1015",
+    "college_id": 3,
+    "credit_hours": 5,
+    "popularity": 0.9654075725587217
+  },
+  {
+    "id": 16,
+    "name": "Advanced contextually-based Internet solution",
+    "code": "CRS1016",
+    "college_id": 3,
+    "credit_hours": 4,
+    "popularity": 0.7617772043052593
+  },
+  {
+    "id": 17,
+    "name": "Organic modular artificial intelligence",
+    "code": "CRS1017",
+    "college_id": 3,
+    "credit_hours": 4,
+    "popularity": 0.8919108554522326
+  },
+  {
+    "id": 18,
+    "name": "Versatile solution-oriented application",
+    "code": "CRS1018",
+    "college_id": 3,
+    "credit_hours": 4,
+    "popularity": 0.633169175479682
+  },
+  {
+    "id": 19,
+    "name": "Face-to-face client-server projection",
+    "code": "CRS1019",
+    "college_id": 1,
+    "credit_hours": 5,
+    "popularity": 0.7415777728743835
+  },
+  {
+    "id": 20,
+    "name": "Reactive methodical secured line",
+    "code": "CRS1020",
+    "college_id": 1,
+    "credit_hours": 3,
+    "popularity": 0.8580244055432067
+  },
+  {
+    "id": 21,
+    "name": "Up-sized scalable system engine",
+    "code": "CRS1021",
+    "college_id": 4,
+    "credit_hours": 3,
+    "popularity": 0.738733868516934
+  },
+  {
+    "id": 22,
+    "name": "Pre-emptive multi-state analyzer",
+    "code": "CRS1022",
+    "college_id": 4,
+    "credit_hours": 5,
+    "popularity": 0.7052603950371226
+  },
+  {
+    "id": 23,
+    "name": "Open-source multi-tasking artificial intelligence",
+    "code": "CRS1023",
+    "college_id": 4,
+    "credit_hours": 4,
+    "popularity": 0.8389210727579732
+  },
+  {
+    "id": 24,
+    "name": "Down-sized methodical synergy",
+    "code": "CRS1024",
+    "college_id": 3,
+    "credit_hours": 3,
+    "popularity": 0.9582764465987281
+  }
+]

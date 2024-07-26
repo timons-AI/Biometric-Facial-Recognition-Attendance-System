@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "name": "College of Engineering"
+  },
+  {
+    "id": 2,
+    "name": "College of Sciences"
+  },
+  {
+    "id": 3,
+    "name": "College of Business"
+  },
+  {
+    "id": 4,
+    "name": "College of Arts and Humanities"
+  }
+]

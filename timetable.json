@@ -1,0 +1,362 @@
+[
+  {
+    "course_id": 1,
+    "lecturer_id": 3,
+    "day": "Monday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 208"
+  },
+  {
+    "course_id": 1,
+    "lecturer_id": 3,
+    "day": "Friday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 414"
+  },
+  {
+    "course_id": 2,
+    "lecturer_id": 1,
+    "day": "Thursday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 410"
+  },
+  {
+    "course_id": 2,
+    "lecturer_id": 1,
+    "day": "Friday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 479"
+  },
+  {
+    "course_id": 2,
+    "lecturer_id": 1,
+    "day": "Tuesday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 369"
+  },
+  {
+    "course_id": 3,
+    "lecturer_id": 1,
+    "day": "Tuesday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 122"
+  },
+  {
+    "course_id": 3,
+    "lecturer_id": 1,
+    "day": "Thursday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 115"
+  },
+  {
+    "course_id": 3,
+    "lecturer_id": 1,
+    "day": "Friday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 448"
+  },
+  {
+    "course_id": 4,
+    "lecturer_id": 13,
+    "day": "Wednesday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 252"
+  },
+  {
+    "course_id": 4,
+    "lecturer_id": 13,
+    "day": "Friday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 267"
+  },
+  {
+    "course_id": 4,
+    "lecturer_id": 13,
+    "day": "Tuesday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 334"
+  },
+  {
+    "course_id": 5,
+    "lecturer_id": 1,
+    "day": "Thursday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 287"
+  },
+  {
+    "course_id": 5,
+    "lecturer_id": 1,
+    "day": "Monday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 295"
+  },
+  {
+    "course_id": 6,
+    "lecturer_id": 2,
+    "day": "Friday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 196"
+  },
+  {
+    "course_id": 6,
+    "lecturer_id": 2,
+    "day": "Thursday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 210"
+  },
+  {
+    "course_id": 6,
+    "lecturer_id": 2,
+    "day": "Monday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 278"
+  },
+  {
+    "course_id": 7,
+    "lecturer_id": 5,
+    "day": "Tuesday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 341"
+  },
+  {
+    "course_id": 8,
+    "lecturer_id": 8,
+    "day": "Wednesday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 251"
+  },
+  {
+    "course_id": 9,
+    "lecturer_id": 3,
+    "day": "Thursday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 425"
+  },
+  {
+    "course_id": 9,
+    "lecturer_id": 3,
+    "day": "Monday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 180"
+  },
+  {
+    "course_id": 9,
+    "lecturer_id": 3,
+    "day": "Friday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 351"
+  },
+  {
+    "course_id": 10,
+    "lecturer_id": 27,
+    "day": "Monday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 243"
+  },
+  {
+    "course_id": 11,
+    "lecturer_id": 8,
+    "day": "Friday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 245"
+  },
+  {
+    "course_id": 11,
+    "lecturer_id": 8,
+    "day": "Wednesday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 154"
+  },
+  {
+    "course_id": 12,
+    "lecturer_id": 3,
+    "day": "Tuesday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 499"
+  },
+  {
+    "course_id": 12,
+    "lecturer_id": 3,
+    "day": "Friday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 443"
+  },
+  {
+    "course_id": 12,
+    "lecturer_id": 3,
+    "day": "Wednesday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 286"
+  },
+  {
+    "course_id": 13,
+    "lecturer_id": 16,
+    "day": "Friday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 201"
+  },
+  {
+    "course_id": 14,
+    "lecturer_id": 5,
+    "day": "Monday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 372"
+  },
+  {
+    "course_id": 15,
+    "lecturer_id": 7,
+    "day": "Friday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 119"
+  },
+  {
+    "course_id": 15,
+    "lecturer_id": 7,
+    "day": "Wednesday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 496"
+  },
+  {
+    "course_id": 16,
+    "lecturer_id": 30,
+    "day": "Wednesday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 461"
+  },
+  {
+    "course_id": 16,
+    "lecturer_id": 30,
+    "day": "Monday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 449"
+  },
+  {
+    "course_id": 17,
+    "lecturer_id": 4,
+    "day": "Friday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 183"
+  },
+  {
+    "course_id": 18,
+    "lecturer_id": 7,
+    "day": "Tuesday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 156"
+  },
+  {
+    "course_id": 18,
+    "lecturer_id": 7,
+    "day": "Wednesday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 214"
+  },
+  {
+    "course_id": 19,
+    "lecturer_id": 14,
+    "day": "Wednesday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 153"
+  },
+  {
+    "course_id": 20,
+    "lecturer_id": 11,
+    "day": "Monday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 122"
+  },
+  {
+    "course_id": 20,
+    "lecturer_id": 11,
+    "day": "Tuesday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 462"
+  },
+  {
+    "course_id": 21,
+    "lecturer_id": 29,
+    "day": "Thursday",
+    "time": "09:00",
+    "duration": "02:00:00",
+    "room": "Room 204"
+  },
+  {
+    "course_id": 21,
+    "lecturer_id": 29,
+    "day": "Monday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 436"
+  },
+  {
+    "course_id": 22,
+    "lecturer_id": 13,
+    "day": "Monday",
+    "time": "16:00",
+    "duration": "02:00:00",
+    "room": "Room 490"
+  },
+  {
+    "course_id": 23,
+    "lecturer_id": 12,
+    "day": "Monday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 307"
+  },
+  {
+    "course_id": 24,
+    "lecturer_id": 34,
+    "day": "Monday",
+    "time": "14:00",
+    "duration": "02:00:00",
+    "room": "Room 418"
+  },
+  {
+    "course_id": 24,
+    "lecturer_id": 34,
+    "day": "Thursday",
+    "time": "11:00",
+    "duration": "02:00:00",
+    "room": "Room 316"
+  }
+]

@@ -19,6 +19,7 @@ import StudentViewPortal from "./components/StudentViewPortal";
 import PageNotFound from "./components/PageNotFound";
 import AdminTimetableManagement from "./components/AdminTimeTableMgt";
 import LecturerRegistration from "./components/LecturerRegistration";
+import AdminReportsDashboard from "./components/AdminReport";
 
 const App: React.FC = () => {
   const [isAuthenticated] = useAtom(isAuthenticatedAtom);
@@ -45,6 +46,7 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegistrationForm />} />
           <Route path="/login" element={<LoginForm />} />
           <Route path="/student-portal" element={<StudentViewPortal />} />
+          <Route path="/admin/reports" element={<AdminReportsDashboard />} />
           <Route
             path="/student/dashboard"
             element={
